@@ -245,15 +245,8 @@ function App() {
   const handleLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
-    setStep('login');
-    
-    const request = indexedDB.deleteDatabase('EksoDB');
-    request.onsuccess = () => {
-      window.location.reload();
-    };
-    request.onerror = () => {
-      window.location.reload();
-    };
+    setStep('nickname');
+    window.location.reload();
   };
 
   return (
