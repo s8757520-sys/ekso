@@ -183,6 +183,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
         </p>
       </div>
 
+      {/* Master key — always visible */}
       <div className="bg-[var(--bg-secondary)] rounded-xl p-4">
         <p className="text-xs text-[var(--text-secondary)] mb-2 text-center">{t.masterLabel}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -210,6 +211,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
         </div>
       </div>
 
+      {/* SEC password — only in full mode */}
       {mode === 'full' && (
         <div className="bg-[var(--bg-secondary)] rounded-xl p-4">
           <p className="text-xs text-[var(--text-secondary)] mb-2 text-center">{t.secLabel}</p>
