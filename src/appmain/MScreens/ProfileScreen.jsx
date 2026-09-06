@@ -2,7 +2,7 @@
  * File: ProfileScreen.jsx
  * Date: 2026-09-06
  * Purpose: User profile screen
- * Description: Shows avatar, nickname, editable name, stats, security, and actions
+ * Description: Shows avatar, nickname, editable name, stats (icons), security, and actions
  * Author: Ekso Team
  */
 
@@ -90,12 +90,10 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
             {nickname ? nickname.charAt(0).toUpperCase() : '?'}
           </div>
           
-          {/* Никнейм */}
           <p className="text-lg md:text-xl font-semibold text-[var(--text-primary)]">
             @{nickname || 'Гость'}
           </p>
           
-          {/* Имя (редактируемое) */}
           <div className="flex items-center gap-2 mt-1">
             {isEditingName ? (
               <>
@@ -135,25 +133,24 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
             )}
           </div>
           
-          {/* Статус */}
           <div className="flex items-center gap-1.5 mt-1">
             <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
             <span className="text-sm text-green-500">{t.statusOnline}</span>
           </div>
         </div>
 
-        {/* Статистика */}
+        {/* Статистика — иконки + текст (данные подтянутся позже) */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer">
-            <p className="text-xl md:text-2xl font-bold text-[var(--text-primary)]">12</p>
+            <div className="text-2xl mb-1">👥</div>
             <p className="text-xs text-[var(--text-secondary)]">{t.contacts}</p>
           </div>
           <div className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer">
-            <p className="text-xl md:text-2xl font-bold text-[var(--text-primary)]">5</p>
+            <div className="text-2xl mb-1">📢</div>
             <p className="text-xs text-[var(--text-secondary)]">{t.channels}</p>
           </div>
           <div className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer">
-            <p className="text-xl md:text-2xl font-bold text-[var(--text-primary)]">3</p>
+            <div className="text-2xl mb-1">🔔</div>
             <p className="text-xs text-[var(--text-secondary)]">{t.notifications}</p>
           </div>
         </div>
