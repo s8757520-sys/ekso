@@ -27,6 +27,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
   const pinInputRefs = useRef([]);
   const masterInputRefs = useRef([]);
 
+  // Сохраняем состояние при изменении
   useEffect(() => {
     sessionStorage.setItem('restore_mode', mode);
   }, [mode]);
@@ -77,6 +78,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
     newBlocks[index] = cleaned;
     setMasterKeyBlocks(newBlocks);
     setError('');
+
     if (cleaned.length === 6 && index < 7) {
       masterInputRefs.current[index + 1]?.focus();
     }
@@ -88,6 +90,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
     newPin[index] = value.slice(0, 1);
     setPin(newPin);
     setError('');
+
     if (value && index < 3) {
       pinInputRefs.current[index + 1]?.focus();
     }
@@ -111,6 +114,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
       setError('Введите все 8 блоков мастер-ключа');
       return;
     }
+
     if (mode === 'full') {
       const pinString = pin.join('');
       if (pinString.length !== 4) {
@@ -118,10 +122,13 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
         return;
       }
     }
+
     setIsLoading(true);
     setError('');
+
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
+      // Очищаем sessionStorage после успешного восстановления
       sessionStorage.removeItem('restore_mode');
       sessionStorage.removeItem('restore_masterKey');
       sessionStorage.removeItem('restore_pin');
@@ -140,25 +147,25 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">{t.title}</h2>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">{t.choose}</p>
+          <h2 className="text-xl font-semibold text-gray-800">{t.title}</h2>
+          <p className="text-sm text-gray-500 mt-1">{t.choose}</p>
         </div>
 
         <div className="space-y-3">
           <button
             onClick={() => setMode('master')}
-            className="w-full text-center p-4 border border-[var(--border-color)] rounded-xl hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-all"
+            className="w-full text-center p-4 border border-gray-200 rounded-xl hover:bg-blue-50 active:bg-blue-100 transition-all"
           >
-            <div className="font-medium text-[var(--text-primary)]">{t.optionMaster}</div>
-            <div className="text-sm text-[var(--text-secondary)]">{t.descMaster}</div>
+            <div className="font-medium text-gray-800">{t.optionMaster}</div>
+            <div className="text-sm text-gray-400">{t.descMaster}</div>
           </button>
 
           <button
             onClick={() => setMode('full')}
-            className="w-full text-center p-4 border border-[var(--border-color)] rounded-xl hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-all"
+            className="w-full text-center p-4 border border-gray-200 rounded-xl hover:bg-blue-50 active:bg-blue-100 transition-all"
           >
-            <div className="font-medium text-[var(--text-primary)]">{t.optionFull}</div>
-            <div className="text-sm text-[var(--text-secondary)]">{t.descFull}</div>
+            <div className="font-medium text-gray-800">{t.optionFull}</div>
+            <div className="text-sm text-gray-400">{t.descFull}</div>
           </button>
         </div>
       </div>
@@ -168,23 +175,23 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+        <h2 className="text-xl font-semibold text-gray-800">
           {mode === 'master' ? t.optionMaster : t.optionFull}
         </h2>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">
+        <p className="text-sm text-gray-500 mt-1">
           {mode === 'master' ? 'Введите мастер-ключ' : 'Введите мастер-ключ и PIN-код'}
         </p>
       </div>
 
-      <div className="bg-[var(--bg-secondary)] rounded-xl p-4">
-        <p className="text-xs text-[var(--text-secondary)] mb-2 text-center">{t.masterLabel}</p>
+      <div className="bg-gray-50 rounded-xl p-4">
+        <p className="text-xs text-gray-400 mb-2 text-center">{t.masterLabel}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {masterKeyBlocks.map((block, index) => (
             <div key={index} className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[var(--bg-hover)] text-xs text-[var(--text-secondary)] font-sans flex items-center justify-center font-medium flex-shrink-0">
+              <span className="w-6 h-6 rounded-full bg-gray-200 text-xs text-gray-600 font-sans flex items-center justify-center font-medium flex-shrink-0">
                 {index + 1}
               </span>
-              <span className="text-[var(--border-color)] font-light">|</span>
+              <span className="text-gray-300 font-light">|</span>
               <input
                 ref={(el) => (masterInputRefs.current[index] = el)}
                 type="text"
@@ -194,7 +201,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
                 onChange={(e) => handleMasterChange(index, e.target.value)}
                 onKeyDown={(e) => handleMasterKeyDown(index, e)}
                 placeholder="000000"
-                className="flex-1 min-w-0 px-2 py-2 text-center font-mono text-lg font-bold text-[var(--text-primary)] border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="flex-1 min-w-0 px-2 py-2 text-center font-mono text-lg font-bold text-gray-800 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 maxLength={6}
                 autoFocus={index === 0}
               />
@@ -206,7 +213,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
       {mode === 'full' && (
         <>
           <div className="text-center">
-            <p className="text-sm font-medium text-[var(--text-primary)]">{t.pinLabel}</p>
+            <p className="text-sm font-medium text-gray-700">{t.pinLabel}</p>
           </div>
           <div className="flex justify-center gap-3 max-w-xs mx-auto">
             {pin.map((digit, index) => (
@@ -244,7 +251,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
           setMode(null);
           sessionStorage.removeItem('restore_mode');
         }}
-        className="w-full text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline text-center"
+        className="w-full text-sm text-gray-500 hover:underline text-center"
       >
         ← {lang === 'ru' ? 'Назад' : 'Back'}
       </button>
