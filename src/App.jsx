@@ -256,6 +256,7 @@ function App() {
           publicKey={masterKeyData?.wallet?.publicKey}
           lang={lang}
           onLogout={handleLogout}
+          isJustLoggedIn={step === 'main' && masterKeyData !== null}
         />
       ) : (
         <div className="flex items-center justify-center p-4 min-h-screen">
