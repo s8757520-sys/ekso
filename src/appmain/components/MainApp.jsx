@@ -22,7 +22,7 @@ const chats = [
   { id: 6, name: 'Вика', lastMessage: 'Сили обороны отримали наказ...', time: '07:15', avatar: 'В' },
 ];
 
-const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout }) => {
+const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout, isJustLoggedIn = false }) => {
   const [activeTab, setActiveTab] = useState('chats');
   const [selectedChat, setSelectedChat] = useState(null);
   const [selectedChatName, setSelectedChatName] = useState('');
@@ -38,12 +38,12 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout }) => {
     const loadPin = async () => {
       const pin = await getPinFromDB();
       setStoredPin(pin);
-      if (pin) {
+      if (pin && !isJustLoggedIn) {
         setIsPinRequired(true);
       }
     };
     loadPin();
-  }, []);
+  }, [isJustLoggedIn]);
 
   const handlePinSubmit = () => {
     if (pinInput === storedPin) {
@@ -129,39 +129,60 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout }) => {
 
       <Footer activeTab={activeTab} onTabChange={setActiveTab} lang={lang} />
 
-      {/* Прозрачный попап для PIN */}
+      {/* Прозрачный попап для PIN — в стиле PinScreen */}
       {isPinRequired && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[var(--bg-secondary)] rounded-xl p-6 max-w-sm w-full shadow-xl">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-              {lang === 'ru' ? 'Подтвердите личность' : 'Verify identity'}
-            </h3>
-            <p className="text-sm text-[var(--text-secondary)] mb-4">
-              {lang === 'ru'
-                ? 'Введите PIN-код для доступа к чатам и кошельку'
-                : 'Enter PIN code to access chats and wallet'}
-            </p>
-            <input
-              type="password"
-              value={pinInput}
-              onChange={(e) => {
-                setPinInput(e.target.value);
-                setPinError('');
-              }}
-              placeholder={lang === 'ru' ? 'PIN-код' : 'PIN code'}
-              className="w-full px-4 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-              onKeyDown={(e) => e.key === 'Enter' && handlePinSubmit()}
-            />
+          <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-semibold text-[var(--text-primary)]">
+                {lang === 'ru' ? 'Введите PIN-код' : 'Enter PIN code'}
+              </h3>
+              <p className="text-sm text-[var(--text-secondary)] mt-1">
+                {lang === 'ru'
+                  ? 'Введите 4 цифры для доступа'
+                  : 'Enter 4 digits to access'}
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-3 max-w-xs mx-auto">
+              {[0, 1, 2, 3].map((index) => (
+                <input
+                  key={index}
+                  type="password"
+                  maxLength={1}
+                  value={pinInput[index] || ''}
+                  onChange={(e) => {
+                    const newPin = pinInput.split('');
+                    newPin[index] = e.target.value;
+                    setPinInput(newPin.join(''));
+                    setPinError('');
+                    if (e.target.value && index < 3) {
+                      document.getElementById(`pin-${index + 1}`)?.focus();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Backspace' && !pinInput[index] && index > 0) {
+                      document.getElementById(`pin-${index - 1}`)?.focus();
+                    }
+                  }}
+                  id={`pin-${index}`}
+                  className="w-12 h-14 text-center text-2xl font-bold border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-[var(--bg-primary)] text-[var(--text-primary)] border-[var(--border-color)]"
+                  autoFocus={index === 0}
+                />
+              ))}
+            </div>
+
             {pinError && (
-              <p className="text-red-500 text-sm mt-2">{pinError}</p>
+              <p className="text-red-500 text-sm text-center mt-3">{pinError}</p>
             )}
+
             <button
               onClick={handlePinSubmit}
-              className="w-full py-2 bg-blue-600 text-white rounded-lg mt-4 hover:bg-blue-700 transition"
+              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors mt-4"
             >
               {lang === 'ru' ? 'Подтвердить' : 'Confirm'}
             </button>
+
             <button
               onClick={onLogout}
               className="w-full py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline transition mt-2"
