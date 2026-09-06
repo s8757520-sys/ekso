@@ -82,9 +82,9 @@ const LoginScreen = ({ onLogin, lang = 'ru' }) => {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-xl font-semibold text-gray-800">{t.title}</h2>
-        <p className="text-sm text-gray-500 mt-1">{t.subtitle}</p>
-      </div>
+  <h2 className="text-xl font-semibold text-[var(--text-primary)]">{t.title}</h2>
+  <p className="text-sm text-[var(--text-secondary)] mt-1">{t.subtitle}</p>
+</div>
 
       <div className="flex justify-center gap-3 max-w-xs mx-auto">
         {pin.map((digit, index) => (
