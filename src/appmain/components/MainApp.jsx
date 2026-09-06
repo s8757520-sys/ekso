@@ -52,7 +52,6 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
       onNavigate('logout');
       return;
     }
-    // остальные пункты меню — заглушка
     console.log('Navigate to:', page);
     setCurrentScreen(page);
   };
@@ -77,6 +76,15 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
   if (currentScreen === 'profile') {
     return (
       <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={toggleSidebar}
+          onNavigate={handleNavigate}
+          nickname={nickname}
+          publicKey={publicKey}
+          lang={lang}
+          onLanguageChange={setLang}
+        />
         <Header onMenuClick={toggleSidebar} />
         <div className="flex-1 overflow-y-auto">
           <ProfileScreen
