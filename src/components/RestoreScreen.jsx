@@ -1,12 +1,11 @@
 /**
- * File: RestoreScreen.jsx
- * Date: 2026-09-06
- * Purpose: Restore account on a new device
- * Description: User chooses recovery mode:
- *          1. Master key only — restores account and wallet (no chat archive)
- *          2. Master key + SEC password — restores account, wallet, and full archive (chats, settings, contacts)
- *          SEC = Special Encrypted Container (backup)
- * Author: Ekso Team
+ * Файл: RestoreScreen.jsx
+ * Дата: 2026-09-06
+ * Назначение: Экран входа на новом устройстве
+ * Описание: Пользователь выбирает тип восстановления:
+ *          1. Только мастер-ключ (без чатов)
+ *          2. Мастер-ключ + PIN (с чатами)
+ * Автор: Ekso Team
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -19,23 +18,23 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
     const saved = sessionStorage.getItem('restore_masterKey');
     return saved ? JSON.parse(saved) : Array(8).fill('');
   });
-  const [secPassword, setSecPassword] = useState(() => {
-    const saved = sessionStorage.getItem('restore_secPassword');
-    return saved ? JSON.parse(saved) : Array(6).fill('');
+  const [pin, setPin] = useState(() => {
+    const saved = sessionStorage.getItem('restore_pin');
+    return saved ? JSON.parse(saved) : ['', '', '', ''];
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const secInputRefs = useRef([]);
+  const pinInputRefs = useRef([]);
   const masterInputRefs = useRef([]);
 
-  // Clear sessionStorage on mount to always start from mode selection
+  // Очищаем sessionStorage при загрузке экрана
   useEffect(() => {
     sessionStorage.removeItem('restore_mode');
     sessionStorage.removeItem('restore_masterKey');
-    sessionStorage.removeItem('restore_secPassword');
+    sessionStorage.removeItem('restore_pin');
   }, []);
 
-  // Save state on change
+  // Сохраняем состояние при изменении
   useEffect(() => {
     sessionStorage.setItem('restore_mode', mode);
   }, [mode]);
@@ -45,8 +44,8 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
   }, [masterKeyBlocks]);
 
   useEffect(() => {
-    sessionStorage.setItem('restore_secPassword', JSON.stringify(secPassword));
-  }, [secPassword]);
+    sessionStorage.setItem('restore_pin', JSON.stringify(pin));
+  }, [pin]);
 
   const texts = {
     ru: {
@@ -55,9 +54,9 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
       optionMaster: 'К кошельку и аккаунту без архива',
       descMaster: 'Только мастер-ключ',
       optionFull: 'С полным архивом аккаунта',
-      descFull: 'Мастер-ключ + пароль SEC',
+      descFull: 'Мастер-ключ + PIN',
       masterLabel: 'Мастер-ключ (48 цифр)',
-      secLabel: 'Пароль SEC (6 блоков по 6 цифр)',
+      pinLabel: 'PIN-код (4 цифры)',
       restore: 'Восстановить',
       loading: 'Проверка...',
       error: 'Неверные данные. Попробуйте снова.',
@@ -68,9 +67,9 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
       optionMaster: 'To wallet and account without archive',
       descMaster: 'Master key only',
       optionFull: 'With full account archive',
-      descFull: 'Master key + SEC password',
+      descFull: 'Master key + PIN',
       masterLabel: 'Master key (48 digits)',
-      secLabel: 'SEC password (6 blocks of 6 digits)',
+      pinLabel: 'PIN code (4 digits)',
       restore: 'Restore',
       loading: 'Checking...',
       error: 'Invalid data. Please try again.',
@@ -91,21 +90,20 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
     }
   };
 
-  const handleSecChange = (index, value) => {
+  const handlePinChange = (index, value) => {
     if (!/^\d*$/.test(value)) return;
-    const newSec = [...secPassword];
-    const cleaned = value.slice(0, 6);
-    newSec[index] = cleaned;
-    setSecPassword(newSec);
+    const newPin = [...pin];
+    newPin[index] = value.slice(0, 1);
+    setPin(newPin);
     setError('');
-    if (cleaned.length === 6 && index < 5) {
-      secInputRefs.current[index + 1]?.focus();
+    if (value && index < 3) {
+      pinInputRefs.current[index + 1]?.focus();
     }
   };
 
-  const handleSecKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !secPassword[index] && index > 0) {
-      secInputRefs.current[index - 1]?.focus();
+  const handlePinKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !pin[index] && index > 0) {
+      pinInputRefs.current[index - 1]?.focus();
     }
   };
 
@@ -122,9 +120,9 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
       return;
     }
     if (mode === 'full') {
-      const secString = secPassword.join('');
-      if (secString.length !== 36) {
-        setError('Введите все 6 блоков пароля SEC');
+      const pinString = pin.join('');
+      if (pinString.length !== 4) {
+        setError('Введите 4 цифры PIN-кода');
         return;
       }
     }
@@ -134,11 +132,11 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       sessionStorage.removeItem('restore_mode');
       sessionStorage.removeItem('restore_masterKey');
-      sessionStorage.removeItem('restore_secPassword');
+      sessionStorage.removeItem('restore_pin');
       onRestore({
         mode,
         masterKey: masterKeyBlocks,
-        secPassword: mode === 'full' ? secPassword.join('') : null,
+        pin: mode === 'full' ? pin.join('') : null,
       });
     } catch (err) {
       setError(t.error);
@@ -182,7 +180,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
           {mode === 'master' ? t.optionMaster : t.optionFull}
         </h2>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
-          {mode === 'master' ? 'Введите мастер-ключ' : 'Введите мастер-ключ и пароль SEC'}
+          {mode === 'master' ? 'Введите мастер-ключ' : 'Введите мастер-ключ и PIN-код'}
         </p>
       </div>
 
@@ -215,31 +213,22 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
 
       {mode === 'full' && (
         <>
-          <div className="bg-[var(--bg-secondary)] rounded-xl p-4 mt-4">
-            <p className="text-xs text-[var(--text-secondary)] mb-2 text-center">{t.secLabel}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {secPassword.map((block, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-[var(--bg-hover)] text-xs text-[var(--text-secondary)] font-sans flex items-center justify-center font-medium flex-shrink-0">
-                    {index + 1}
-                  </span>
-                  <span className="text-[var(--border-color)] font-light">|</span>
-                  <input
-                    ref={(el) => (secInputRefs.current[index] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={block}
-                    onChange={(e) => handleSecChange(index, e.target.value)}
-                    onKeyDown={(e) => handleSecKeyDown(index, e)}
-                    placeholder="000000"
-                    className="flex-1 min-w-0 px-2 py-2 text-center font-mono text-lg font-bold text-[var(--text-primary)] border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    maxLength={6}
-                    autoFocus={index === 0}
-                  />
-                </div>
-              ))}
-            </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-[var(--text-primary)]">{t.pinLabel}</p>
+          </div>
+          <div className="flex justify-center gap-3 max-w-xs mx-auto">
+            {pin.map((digit, index) => (
+              <input
+                key={index}
+                ref={(el) => (pinInputRefs.current[index] = el)}
+                type="password"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handlePinChange(index, e.target.value)}
+                onKeyDown={(e) => handlePinKeyDown(index, e)}
+                className="w-12 h-14 text-center text-2xl font-bold border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              />
+            ))}
           </div>
         </>
       )}
