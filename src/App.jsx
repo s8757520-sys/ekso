@@ -252,8 +252,8 @@ function App() {
           lang={lang}
         />
       ) : (
-        <div className="flex items-center justify-center p-4 min-h-screen">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+       <div className="flex items-center justify-center p-4 min-h-screen bg-[var(--bg-primary)]">
+  <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-xl p-6 w-full max-w-md">
 
             {/* ===== ENTRY SCREEN ===== */}
             {!entryMode && step !== 'login' && (
