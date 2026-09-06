@@ -166,7 +166,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru' }) => {
               onClick={() => {
                 localStorage.clear();
                 sessionStorage.clear();
-                window.location.href = '/';
+                window.location.reload();
               }}
               className="w-full py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline transition mt-2"
             >
