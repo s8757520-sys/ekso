@@ -1,0 +1,122 @@
+/**
+ * File: Sidebar.jsx
+ * Date: 2026-09-05
+ * Purpose: Sidebar navigation menu
+ * Description: Slides in from the left with profile and navigation items
+ * Author: Ekso Team
+ */
+
+import { useState } from 'react';
+
+const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru' }) => {
+  const texts = {
+    ru: {
+      profile: '👤 Мой профиль',
+      chats: '💬 Чаты',
+      channels: '📢 Мои каналы',
+      wallet: '💰 Кошелёк',
+      settings: '⚙️ Настройки',
+      logout: '🚪 Выйти',
+      close: 'Закрыть',
+    },
+    en: {
+      profile: '👤 My Profile',
+      chats: '💬 Chats',
+      channels: '📢 My Channels',
+      wallet: '💰 Wallet',
+      settings: '⚙️ Settings',
+      logout: '🚪 Logout',
+      close: 'Close',
+    },
+  };
+
+  const t = texts[lang] || texts.ru;
+
+  const menuItems = [
+    { id: 'profile', label: t.profile, icon: '👤' },
+    { id: 'chats', label: t.chats, icon: '💬' },
+    { id: 'channels', label: t.channels, icon: '📢' },
+    { id: 'wallet', label: t.wallet, icon: '💰' },
+    { id: 'settings', label: t.settings, icon: '⚙️' },
+  ];
+
+  const handleLogout = () => {
+    // Очистка IndexedDB и выход
+    if (window.confirm(t.logout)) {
+      // Здесь позже добавим очистку
+      onNavigate('logout');
+    }
+  };
+
+  return (
+    <>
+      {/* Затемнение (клик по нему закрывает меню) */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Само меню */}
+      <div
+        className={`fixed top-0 left-0 h-full w-72 bg-[var(--bg-secondary)] z-50 shadow-xl transform transition-transform duration-300 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Верхняя часть: профиль */}
+        <div className="p-4 border-b border-[var(--border-color)]">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
+              {nickname ? nickname.charAt(0).toUpperCase() : '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-[var(--text-primary)] text-sm">
+                {nickname || 'Гость'}
+              </div>
+              <div className="text-xs text-[var(--text-secondary)] truncate">
+                {publicKey ? publicKey.slice(0, 12) + '...' : 'Нет ключа'}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xl"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Список пунктов меню */}
+        <div className="py-2">
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                onNavigate(item.id);
+                onClose();
+              }}
+              className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-[var(--bg-primary)] transition text-[var(--text-primary)] text-sm"
+            >
+              <span className="text-lg">{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Кнопка выхода */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-[var(--border-color)]">
+          <button
+            onClick={handleLogout}
+            className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-red-500/10 transition text-red-500 text-sm rounded-lg"
+          >
+            <span className="text-lg">🚪</span>
+            {t.logout}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default Sidebar;
