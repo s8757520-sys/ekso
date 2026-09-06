@@ -40,6 +40,7 @@ function App() {
   const [masterKeyData, setMasterKeyData] = useState(null);
   const [entryMode, setEntryMode] = useState(null);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
   const lastMessageRef = useRef(null);
   const isMasterKeyGenerated = useRef(false);
 
@@ -106,6 +107,7 @@ function App() {
   useEffect(() => {
     const checkLocalSession = async () => {
       const data = await loadUserData();
+      setHasSession(!!data);
       if (data) {
         console.log('🔐 Existing session found');
         setNickname(data.nickname || '');
@@ -266,7 +268,7 @@ function App() {
             {/* ===== ENTRY SCREEN ===== */}
             {!entryMode && step !== 'login' && (
               <OnboardingLayoutES lang={lang} onToggleLang={toggleLang}>
-                <EntryScreen onSelect={handleEntrySelect} lang={lang} />
+                <EntryScreen onSelect={handleEntrySelect} lang={lang} hasSession={hasSession} />
               </OnboardingLayoutES>
             )}
 
