@@ -94,10 +94,10 @@ const WalletLoginScreen = ({ onLogin, lang = 'ru' }) => {
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-800">{t.title}</h2>
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">{t.title}</h2>
         </div>
 
-        <div className="bg-yellow-50 rounded-lg p-4 text-sm text-gray-700 text-center">
+        <div className="bg-yellow-50 rounded-lg p-4 text-sm text-[var(--text-primary)] text-center">
           {t.tutorialText}
         </div>
 
@@ -109,7 +109,7 @@ const WalletLoginScreen = ({ onLogin, lang = 'ru' }) => {
             onChange={(e) => setIsConfirmed(e.target.checked)}
             className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
-          <label htmlFor="confirm-wallet" className="text-sm text-gray-700">
+          <label htmlFor="confirm-wallet" className="text-sm text-[var(--text-primary)]">
             {t.confirmLabel}
           </label>
         </div>
@@ -133,22 +133,22 @@ const WalletLoginScreen = ({ onLogin, lang = 'ru' }) => {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-xl font-semibold text-gray-800">{t.enterKey}</h2>
-        <p className="text-sm text-gray-500 mt-1">{t.masterLabel}</p>
+        <h2 className="text-xl font-semibold text-[var(--text-primary)]">{t.enterKey}</h2>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">{t.masterLabel}</p>
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-4">
-        <p className="text-xs text-gray-400 mb-2 text-center">{t.masterLabel}</p>
+      <div className="bg-[var(--bg-secondary)] rounded-xl p-4">
+        <p className="text-xs text-[var(--text-secondary)] mb-2 text-center">{t.masterLabel}</p>
         <div className="grid grid-cols-2 gap-2">
           {masterKeyBlocks.map((block, index) => (
             <div
               key={index}
-              className="bg-white rounded-lg px-3 py-2 text-center shadow-sm border border-gray-200 flex items-center gap-2"
+              className="bg-[var(--bg-primary)] rounded-lg px-3 py-2 text-center shadow-sm border border-[var(--border-color)] flex items-center gap-2"
             >
-              <span className="w-6 h-6 rounded-full bg-gray-200 text-xs text-gray-600 font-sans flex items-center justify-center font-medium flex-shrink-0">
+              <span className="w-6 h-6 rounded-full bg-[var(--bg-hover)] text-xs text-[var(--text-secondary)] font-sans flex items-center justify-center font-medium flex-shrink-0">
                 {index + 1}
               </span>
-              <span className="text-gray-300 font-light">|</span>
+              <span className="text-[var(--border-color)] font-light">|</span>
               <input
                 ref={(el) => (masterInputRefs.current[index] = el)}
                 type="text"
@@ -156,7 +156,7 @@ const WalletLoginScreen = ({ onLogin, lang = 'ru' }) => {
                 onChange={(e) => handleMasterChange(index, e.target.value)}
                 onKeyDown={(e) => handleMasterKeyDown(index, e)}
                 placeholder="000000"
-                className="flex-1 min-w-0 bg-transparent text-center font-mono text-lg font-bold text-gray-800 outline-none"
+                className="flex-1 min-w-0 bg-transparent text-center font-mono text-lg font-bold text-[var(--text-primary)] outline-none"
                 maxLength={6}
                 autoFocus={index === 0}
               />
