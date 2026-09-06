@@ -12,8 +12,8 @@ const Header = ({ onMenuClick }) => {
   const { theme, toggleTheme } = useTheme();
 
   const logoSrc = theme === 'light'
-    ? '/images/ekso/ekso-logo-bl.svg'
-    : '/images/ekso/ekso-logo-w.svg';
+    ? '/ekso-logo-bl.svg'
+    : '/ekso-logo-w.svg';
 
   return (
     <div className="sticky top-0 z-10 bg-[var(--bg-secondary)] px-3 sm:px-6 py-4 flex items-center justify-between border-b border-[var(--border-color)]">
