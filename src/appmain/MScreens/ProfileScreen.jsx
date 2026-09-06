@@ -2,7 +2,7 @@
  * File: ProfileScreen.jsx
  * Date: 2026-09-06
  * Purpose: User profile screen
- * Description: Shows avatar, nickname, editable name, stats (icons), security, and actions
+ * Description: Shows avatar, nickname (as text), editable name (with pencil icon), stats, security, actions
  * Author: Ekso Team
  */
 
@@ -13,7 +13,6 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
   const [displayName, setDisplayName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
 
-  // Загружаем имя из localStorage при монтировании
   useEffect(() => {
     const savedName = localStorage.getItem('ekso_display_name');
     if (savedName) {
@@ -28,7 +27,6 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
       title: 'Мой профиль',
       nickname: 'Никнейм',
       name: 'Имя',
-      edit: 'Редактировать',
       save: 'Сохранить',
       cancel: 'Отмена',
       statusOnline: 'онлайн',
@@ -46,7 +44,6 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
       title: 'My Profile',
       nickname: 'Nickname',
       name: 'Name',
-      edit: 'Edit',
       save: 'Save',
       cancel: 'Cancel',
       statusOnline: 'online',
@@ -96,7 +93,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
           <div className="w-16"></div>
         </div>
 
-        {/* Аватар + Статус */}
+        {/* Аватар + Статус + Никнейм */}
         <div className="flex flex-col items-center mb-6">
           <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-blue-500 flex items-center justify-center text-white text-3xl md:text-4xl font-bold mb-3">
             {nickname ? nickname.charAt(0).toUpperCase() : '?'}
@@ -105,10 +102,13 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
             <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
             <span className="text-sm text-green-500">{t.statusOnline}</span>
           </div>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
+            @{nickname || 'Гость'}
+          </p>
         </div>
 
-        {/* Имя (редактируемое) */}
-        <div className="w-full mb-4">
+        {/* Имя (редактируемое) — с иконкой карандаша */}
+        <div className="w-full mb-6">
           <p className="text-sm text-[var(--text-secondary)] mb-1">{t.name}</p>
           {isEditingName ? (
             <div className="flex items-center gap-2">
@@ -141,23 +141,15 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
               <span className="text-[var(--text-primary)]">{displayName || '—'}</span>
               <button
                 onClick={() => setIsEditingName(true)}
-                className="text-sm text-blue-500 hover:text-blue-600 transition"
+                className="text-blue-500 hover:text-blue-600 transition text-lg"
               >
-                ✏️ {t.edit}
+                ✏️
               </button>
             </div>
           )}
         </div>
 
-        {/* Никнейм (неизменяемый) */}
-        <div className="w-full mb-6">
-          <p className="text-sm text-[var(--text-secondary)] mb-1">{t.nickname}</p>
-          <div className="px-4 py-3 bg-[var(--bg-primary)] rounded-lg">
-            <span className="text-[var(--text-primary)]">@{nickname || 'Гость'}</span>
-          </div>
-        </div>
-
-        {/* Статистика — иконки + текст */}
+        {/* Статистика */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer">
             <div className="text-2xl mb-1">👥</div>
