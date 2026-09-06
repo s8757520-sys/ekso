@@ -110,7 +110,7 @@ function App() {
         console.log('🔐 Existing session found');
         setNickname(data.nickname || '');
         setEntryMode(null);
-        setStep('login'); // ← показываем экран ввода PIN
+        setStep('login');
       } else {
         setEntryMode(null);
       }
@@ -246,6 +246,14 @@ function App() {
     localStorage.clear();
     sessionStorage.clear();
     setStep('login');
+    
+    const request = indexedDB.deleteDatabase('EksoDB');
+    request.onsuccess = () => {
+      window.location.reload();
+    };
+    request.onerror = () => {
+      window.location.reload();
+    };
   };
 
   return (
