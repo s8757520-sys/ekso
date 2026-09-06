@@ -2,7 +2,7 @@
  * File: LoginScreen.jsx
  * Date: 2026-09-06
  * Purpose: PIN entry screen for login
- * Description: User enters 4-digit PIN. After 5 attempts shows restore link. After 10 attempts clears IndexedDB.
+ * Description: User enters 4-digit PIN. After 5 attempts shows restore button. After 10 attempts clears IndexedDB.
  * Author: Ekso Team
  */
 
