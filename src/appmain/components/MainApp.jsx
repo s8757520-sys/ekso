@@ -1,16 +1,17 @@
 /**
  * File: MainApp.jsx
- * Date: 2026-09-05
+ * Date: 2026-09-06
  * Purpose: Main application interface after login
  * Description: Displays dashboard with chats, channels, wallet, settings
  * Author: Ekso Team
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ChatScreen from '../../modules/chat/components/ChatScreen';
 import Header from './Header';
 import Footer from './Footer';
 import Sidebar from './Sidebar';
+import { getPinFromDB } from '../../utils/indexedDB';
 
 const chats = [
   { id: 1, name: 'Алексей', lastMessage: 'Привет! Как дела?', time: '14:30', avatar: 'А' },
@@ -21,12 +22,38 @@ const chats = [
   { id: 6, name: 'Вика', lastMessage: 'Сили обороны отримали наказ...', time: '07:15', avatar: 'В' },
 ];
 
-const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
+const MainApp = ({ nickname, publicKey, initialLang = 'ru' }) => {
   const [activeTab, setActiveTab] = useState('chats');
   const [selectedChat, setSelectedChat] = useState(null);
   const [selectedChatName, setSelectedChatName] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lang, setLang] = useState(initialLang);
+  const [isPinRequired, setIsPinRequired] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [storedPin, setStoredPin] = useState(null);
+
+  // Загружаем сохранённый PIN
+  useEffect(() => {
+    const loadPin = async () => {
+      const pin = await getPinFromDB();
+      setStoredPin(pin);
+      if (pin) {
+        setIsPinRequired(true);
+      }
+    };
+    loadPin();
+  }, []);
+
+  const handlePinSubmit = () => {
+    if (pinInput === storedPin) {
+      setIsPinRequired(false);
+      setPinError('');
+    } else {
+      setPinError('Неверный PIN-код');
+      setPinInput('');
+    }
+  };
 
   const openChat = (chat) => {
     setSelectedChat(chat.id);
@@ -58,7 +85,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={toggleSidebar}
-        onNavigate={onNavigate}
+        onNavigate={() => {}}
         nickname={nickname}
         publicKey={publicKey}
         lang={lang}
@@ -101,6 +128,53 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
       </div>
 
       <Footer activeTab={activeTab} onTabChange={setActiveTab} lang={lang} />
+
+      {/* Прозрачный попап для PIN */}
+      {isPinRequired && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--bg-secondary)] rounded-xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+              {lang === 'ru' ? 'Подтвердите личность' : 'Verify identity'}
+            </h3>
+            <p className="text-sm text-[var(--text-secondary)] mb-4">
+              {lang === 'ru'
+                ? 'Введите PIN-код для доступа к чатам и кошельку'
+                : 'Enter PIN code to access chats and wallet'}
+            </p>
+            <input
+              type="password"
+              value={pinInput}
+              onChange={(e) => {
+                setPinInput(e.target.value);
+                setPinError('');
+              }}
+              placeholder={lang === 'ru' ? 'PIN-код' : 'PIN code'}
+              className="w-full px-4 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handlePinSubmit()}
+            />
+            {pinError && (
+              <p className="text-red-500 text-sm mt-2">{pinError}</p>
+            )}
+            <button
+              onClick={handlePinSubmit}
+              className="w-full py-2 bg-blue-600 text-white rounded-lg mt-4 hover:bg-blue-700 transition"
+            >
+              {lang === 'ru' ? 'Подтвердить' : 'Confirm'}
+            </button>
+            <button
+              onClick={() => {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = '/';
+              }}
+              className="w-full py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline transition mt-2"
+            >
+              {lang === 'ru' ? 'Выйти' : 'Logout'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
