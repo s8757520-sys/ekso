@@ -1,8 +1,8 @@
 /**
  * File: Header.jsx
- * Date: 2026-09-05
+ * Date: 2026-09-06
  * Purpose: Top navigation bar for the main app
- * Description: Displays menu button, logo, and theme toggle
+ * Description: Displays menu button, logo images (light/dark), and theme toggle
  * Author: Ekso Team
  */
 
@@ -10,6 +10,10 @@ import { useTheme } from '../../context/ThemeContext';
 
 const Header = ({ onMenuClick }) => {
   const { theme, toggleTheme } = useTheme();
+
+  const logoSrc = theme === 'light'
+    ? '/images/ekso/ekso-logo-bl.svg'
+    : '/images/ekso/ekso-logo-w.svg';
 
   return (
     <div className="bg-[var(--bg-secondary)] px-3 sm:px-6 py-4 flex items-center justify-between border-b border-[var(--border-color)]">
@@ -20,12 +24,11 @@ const Header = ({ onMenuClick }) => {
         ☰
       </span>
 
-      <h1
-        translate="no"
-        className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)] font-['Dubtronic'] font-light"
-      >
-        Ekso
-      </h1>
+      <img
+        src={logoSrc}
+        alt="Ekso"
+        className="h-8 sm:h-10 w-auto"
+      />
 
       <button
         onClick={toggleTheme}
