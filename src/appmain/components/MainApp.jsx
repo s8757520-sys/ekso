@@ -6,7 +6,7 @@
  * Author: Ekso Team
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ChatScreen from '../../modules/chat/components/ChatScreen';
 import Header from './Header';
 import Footer from './Footer';
@@ -22,36 +22,59 @@ const chats = [
   { id: 6, name: 'Вика', lastMessage: 'Сили обороны отримали наказ...', time: '07:15', avatar: 'В' },
 ];
 
-const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout, isJustLoggedIn = false }) => {
+const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout }) => {
   const [activeTab, setActiveTab] = useState('chats');
   const [selectedChat, setSelectedChat] = useState(null);
   const [selectedChatName, setSelectedChatName] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lang, setLang] = useState(initialLang);
   const [isPinRequired, setIsPinRequired] = useState(false);
-  const [pinInput, setPinInput] = useState('');
+  const [pinInput, setPinInput] = useState(['', '', '', '']);
   const [pinError, setPinError] = useState('');
   const [storedPin, setStoredPin] = useState(null);
+  const inputRefs = useRef([]);
 
-  // Загружаем сохранённый PIN
   useEffect(() => {
     const loadPin = async () => {
       const pin = await getPinFromDB();
       setStoredPin(pin);
-      if (pin && !isJustLoggedIn) {
+      if (pin) {
         setIsPinRequired(true);
       }
     };
     loadPin();
-  }, [isJustLoggedIn]);
+  }, []);
+
+  const handlePinChange = (index, value) => {
+    if (!/^\d*$/.test(value)) return;
+    const newPin = [...pinInput];
+    newPin[index] = value.slice(0, 1);
+    setPinInput(newPin);
+    setPinError('');
+    if (value && index < 3) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handlePinKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !pinInput[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
 
   const handlePinSubmit = () => {
-    if (pinInput === storedPin) {
+    const pinString = pinInput.join('');
+    if (pinString.length !== 4) {
+      setPinError('Введите 4 цифры');
+      return;
+    }
+    if (pinString === storedPin) {
       setIsPinRequired(false);
       setPinError('');
     } else {
       setPinError('Неверный PIN-код');
-      setPinInput('');
+      setPinInput(['', '', '', '']);
+      inputRefs.current[0]?.focus();
     }
   };
 
@@ -148,24 +171,12 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout, isJustLogg
               {[0, 1, 2, 3].map((index) => (
                 <input
                   key={index}
+                  ref={(el) => (inputRefs.current[index] = el)}
                   type="password"
                   maxLength={1}
                   value={pinInput[index] || ''}
-                  onChange={(e) => {
-                    const newPin = pinInput.split('');
-                    newPin[index] = e.target.value;
-                    setPinInput(newPin.join(''));
-                    setPinError('');
-                    if (e.target.value && index < 3) {
-                      document.getElementById(`pin-${index + 1}`)?.focus();
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Backspace' && !pinInput[index] && index > 0) {
-                      document.getElementById(`pin-${index - 1}`)?.focus();
-                    }
-                  }}
-                  id={`pin-${index}`}
+                  onChange={(e) => handlePinChange(index, e.target.value)}
+                  onKeyDown={(e) => handlePinKeyDown(index, e)}
                   className="w-12 h-14 text-center text-2xl font-bold border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-[var(--bg-primary)] text-[var(--text-primary)] border-[var(--border-color)]"
                   autoFocus={index === 0}
                 />
