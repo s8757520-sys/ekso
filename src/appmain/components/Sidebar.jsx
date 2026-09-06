@@ -3,14 +3,15 @@
  * Date: 2026-09-06
  * Purpose: Sidebar navigation menu component
  * Description: Slides in from the left side of the screen. Contains user profile info,
- * navigation items and logout functionality.
+ * navigation items (Profile, Chats, Channels, Contacts, Notifications, Wallet,
+ * Keepers Network, Settings, Help & FAQ), and a logout button.
  * Author: Ekso Team
  */
 
 import { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 
-const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru', onLanguageChange }) => {
+const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru', onLanguageChange, activeScreen }) => {
   const { theme, toggleTheme } = useTheme();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -73,7 +74,7 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
 
   const handleConfirmLogout = () => {
     setShowLogoutModal(false);
-    window.location.href = '/';
+    onNavigate('logout');
   };
 
   const toggleLanguage = () => {
@@ -98,6 +99,7 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
+        {/* Верхняя часть: профиль */}
         <div className="p-4 border-b border-[var(--border-color)] relative flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative flex-shrink-0">
@@ -123,22 +125,31 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
           </button>
         </div>
 
+        {/* Список меню */}
         <div className="flex-1 overflow-y-auto py-2">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                onNavigate(item.id);
-                onClose();
-              }}
-              className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-[var(--bg-primary)] transition text-[var(--text-primary)] text-sm"
-            >
-              <span className="text-lg w-8 flex-shrink-0 text-center">{item.icon}</span>
-              <span className="flex-1">{item.label}</span>
-            </button>
-          ))}
+          {menuItems.map((item) => {
+            const isActive = activeScreen === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  onNavigate(item.id);
+                  onClose();
+                }}
+                className={`w-full px-4 py-3 text-left flex items-center gap-3 transition text-sm ${
+                  isActive
+                    ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]'
+                    : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                }`}
+              >
+                <span className="text-lg w-8 flex-shrink-0 text-center">{item.icon}</span>
+                <span className="flex-1">{item.label}</span>
+              </button>
+            );
+          })}
         </div>
 
+        {/* Плашки переключения языка и темы */}
         <div className="px-4 py-3 border-t border-[var(--border-color)] flex-shrink-0">
           <div className="flex items-center justify-center gap-4">
             <button
@@ -159,6 +170,7 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
           </div>
         </div>
 
+        {/* Кнопка выхода */}
         <div className="px-4 py-3 border-t border-[var(--border-color)] flex-shrink-0">
           <button
             onClick={handleLogoutClick}
@@ -170,6 +182,7 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
         </div>
       </div>
 
+      {/* Модалка подтверждения выхода */}
       {showLogoutModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl">
