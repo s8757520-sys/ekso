@@ -1,6 +1,6 @@
 /**
  * File: MainApp.jsx
- * Date: 2026-09-05
+ * Date: 2026-09-06
  * Purpose: Main application interface after login
  * Description: Displays dashboard with chats, channels, wallet, settings
  * Author: Ekso Team
@@ -84,6 +84,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
           publicKey={publicKey}
           lang={lang}
           onLanguageChange={setLang}
+          activeScreen={currentScreen}
         />
         <Header onMenuClick={toggleSidebar} />
         <div className="flex-1 overflow-y-auto">
@@ -109,6 +110,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
         publicKey={publicKey}
         lang={lang}
         onLanguageChange={setLang}
+        activeScreen={currentScreen}
       />
 
       <Header onMenuClick={toggleSidebar} />
