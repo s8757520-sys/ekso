@@ -27,7 +27,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
   const pinInputRefs = useRef([]);
   const masterInputRefs = useRef([]);
 
-  // Очищаем sessionStorage при загрузке
+  // ✅ Очищаем sessionStorage при загрузке экрана
   useEffect(() => {
     sessionStorage.removeItem('restore_mode');
     sessionStorage.removeItem('restore_masterKey');
