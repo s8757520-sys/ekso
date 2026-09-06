@@ -97,9 +97,9 @@ const WalletLoginScreen = ({ onLogin, lang = 'ru' }) => {
           <h2 className="text-xl font-semibold text-[var(--text-primary)]">{t.title}</h2>
         </div>
 
-        <div className="bg-yellow-50 rounded-lg p-4 text-sm text-[var(--text-primary)] text-center">
-          {t.tutorialText}
-        </div>
+        <div className="bg-yellow-50 rounded-lg p-4 text-sm text-gray-700 text-center">
+  {t.tutorialText}
+</div>
 
         <div className="flex items-start gap-3 pt-2">
           <input
