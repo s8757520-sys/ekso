@@ -26,7 +26,7 @@ const LoginScreen = ({ onLogin, onRestore, lang = 'ru' }) => {
       confirm: 'Войти',
       error: 'Неверный PIN-код. Попробуйте снова.',
       errorWithRestore: 'Неверный PIN-код. Восстановите доступ по мастер-ключу.',
-      restore: 'Забыли PIN? Восстановить по мастер-ключу',
+      restore: 'Восстановить мастер-ключом',
       tooManyAttempts: 'Слишком много попыток. Данные удалены. Начните заново.',
     },
     en: {
@@ -35,7 +35,7 @@ const LoginScreen = ({ onLogin, onRestore, lang = 'ru' }) => {
       confirm: 'Login',
       error: 'Incorrect PIN. Please try again.',
       errorWithRestore: 'Incorrect PIN. Restore access via master key.',
-      restore: 'Forgot PIN? Restore via master key',
+      restore: 'Recover with master key',
       tooManyAttempts: 'Too many attempts. Data cleared. Start over.',
     }
   };
