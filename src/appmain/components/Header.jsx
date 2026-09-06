@@ -27,7 +27,7 @@ const Header = ({ onMenuClick }) => {
       <img
         src={logoSrc}
         alt="Ekso"
-        className="h-8 sm:h-10 w-auto"
+        className="h-14 sm:h-18 w-auto"
       />
 
       <button
