@@ -11,17 +11,10 @@
 import { useState, useRef, useEffect } from 'react';
 
 const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
-  const [mode, setMode] = useState(() => {
-    return sessionStorage.getItem('restore_mode') || null;
-  });
-  const [masterKeyBlocks, setMasterKeyBlocks] = useState(() => {
-    const saved = sessionStorage.getItem('restore_masterKey');
-    return saved ? JSON.parse(saved) : Array(8).fill('');
-  });
-  const [pin, setPin] = useState(() => {
-    const saved = sessionStorage.getItem('restore_pin');
-    return saved ? JSON.parse(saved) : ['', '', '', ''];
-  });
+  // Всегда начинаем с чистого состояния (без чтения из sessionStorage)
+  const [mode, setMode] = useState(null);
+  const [masterKeyBlocks, setMasterKeyBlocks] = useState(Array(8).fill(''));
+  const [pin, setPin] = useState(['', '', '', '']);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const pinInputRefs = useRef([]);
@@ -36,7 +29,9 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
 
   // Сохраняем состояние при изменении
   useEffect(() => {
-    sessionStorage.setItem('restore_mode', mode);
+    if (mode) {
+      sessionStorage.setItem('restore_mode', mode);
+    }
   }, [mode]);
 
   useEffect(() => {
@@ -144,6 +139,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
     }
   };
 
+  // Выбор режима
   if (!mode) {
     return (
       <div className="space-y-6">
@@ -173,6 +169,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
     );
   }
 
+  // Ввод данных
   return (
     <div className="space-y-6">
       <div className="text-center">
