@@ -22,7 +22,7 @@ const chats = [
   { id: 6, name: 'Вика', lastMessage: 'Сили обороны отримали наказ...', time: '07:15', avatar: 'В' },
 ];
 
-const MainApp = ({ nickname, publicKey, initialLang = 'ru' }) => {
+const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout }) => {
   const [activeTab, setActiveTab] = useState('chats');
   const [selectedChat, setSelectedChat] = useState(null);
   const [selectedChatName, setSelectedChatName] = useState('');
@@ -163,11 +163,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru' }) => {
               {lang === 'ru' ? 'Подтвердить' : 'Confirm'}
             </button>
             <button
-              onClick={() => {
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.reload();
-              }}
+              onClick={onLogout}
               className="w-full py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline transition mt-2"
             >
               {lang === 'ru' ? 'Выйти' : 'Logout'}
