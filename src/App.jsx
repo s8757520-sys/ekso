@@ -214,7 +214,6 @@ function App() {
         encryptedMasterKey: encryptedData,
       });
 
-      // ОТПРАВЛЯЕМ НА СЕРВЕР
       sendMessage('register_nickname', {
         nickname: nickname,
         publicKey: masterKeyData.wallet.publicKey,
@@ -243,6 +242,12 @@ function App() {
     setStep('wallet');
   };
 
+  const handleLogout = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    setStep('login');
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       {step === 'main' ? (
@@ -250,6 +255,7 @@ function App() {
           nickname={nickname}
           publicKey={masterKeyData?.wallet?.publicKey}
           lang={lang}
+          onLogout={handleLogout}
         />
       ) : (
         <div className="flex items-center justify-center p-4 min-h-screen">
