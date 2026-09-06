@@ -110,7 +110,7 @@ function App() {
         console.log('🔐 Existing session found');
         setNickname(data.nickname || '');
         setEntryMode(null);
-        setStep('main');  // ← Сразу в кабинет
+        setStep('login');
       } else {
         setEntryMode(null);
       }
@@ -253,7 +253,7 @@ function App() {
         />
       ) : (
         <div className="flex items-center justify-center p-4 min-h-screen">
-          <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-xl p-6 w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
 
             {/* ===== ENTRY SCREEN ===== */}
             {!entryMode && step !== 'login' && (
