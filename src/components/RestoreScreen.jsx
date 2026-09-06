@@ -4,7 +4,7 @@
  * Purpose: Restore account on a new device
  * Description: User chooses recovery mode:
  *          1. Master key only — restores account and wallet (no archive)
- *          2. Master key + SEC password — restores account, wallet, and full archive (chats, settings, contacts)
+ *          2. SEC password only — restores archive (chats, settings, contacts)
  *          SEC = Special Encrypted Container (backup)
  * Author: Ekso Team
  */
@@ -12,7 +12,6 @@
 import { useState, useRef, useEffect } from 'react';
 
 const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
-  // Always start with clean state — mode selection is shown every time
   const [mode, setMode] = useState(null);
   const [masterKeyBlocks, setMasterKeyBlocks] = useState(Array(8).fill(''));
   const [secPassword, setSecPassword] = useState(Array(6).fill(''));
@@ -21,18 +20,14 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
   const secInputRefs = useRef([]);
   const masterInputRefs = useRef([]);
 
-  // Clear sessionStorage on mount
   useEffect(() => {
     sessionStorage.removeItem('restore_mode');
     sessionStorage.removeItem('restore_masterKey');
     sessionStorage.removeItem('restore_secPassword');
   }, []);
 
-  // Save state on change
   useEffect(() => {
-    if (mode) {
-      sessionStorage.setItem('restore_mode', mode);
-    }
+    if (mode) sessionStorage.setItem('restore_mode', mode);
   }, [mode]);
 
   useEffect(() => {
@@ -50,7 +45,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
       optionMaster: 'К кошельку и аккаунту без архива',
       descMaster: 'Только мастер-ключ',
       optionFull: 'С полным архивом аккаунта',
-      descFull: 'Мастер-ключ + пароль SEC',
+      descFull: 'Только пароль SEC',
       masterLabel: 'Мастер-ключ (48 цифр)',
       secLabel: 'Пароль SEC (6 блоков по 6 цифр)',
       restore: 'Восстановить',
@@ -63,7 +58,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
       optionMaster: 'To wallet and account without archive',
       descMaster: 'Master key only',
       optionFull: 'With full account archive',
-      descFull: 'Master key + SEC password',
+      descFull: 'SEC password only',
       masterLabel: 'Master key (48 digits)',
       secLabel: 'SEC password (6 blocks of 6 digits)',
       restore: 'Restore',
@@ -111,11 +106,14 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
   };
 
   const handleSubmit = async () => {
-    const fullKey = masterKeyBlocks.join('');
-    if (fullKey.length !== 48) {
-      setError('Введите все 8 блоков мастер-ключа');
-      return;
+    if (mode === 'master') {
+      const fullKey = masterKeyBlocks.join('');
+      if (fullKey.length !== 48) {
+        setError('Введите все 8 блоков мастер-ключа');
+        return;
+      }
     }
+
     if (mode === 'full') {
       const secString = secPassword.join('');
       if (secString.length !== 36) {
@@ -123,6 +121,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
         return;
       }
     }
+
     setIsLoading(true);
     setError('');
     try {
@@ -132,7 +131,7 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
       sessionStorage.removeItem('restore_secPassword');
       onRestore({
         mode,
-        masterKey: masterKeyBlocks,
+        masterKey: mode === 'master' ? masterKeyBlocks : null,
         secPassword: mode === 'full' ? secPassword.join('') : null,
       });
     } catch (err) {
@@ -141,7 +140,6 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
     }
   };
 
-  // Step 1: Mode selection (always shown)
   if (!mode) {
     return (
       <div className="space-y-6">
@@ -171,7 +169,6 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
     );
   }
 
-  // Step 2: Data entry
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -179,39 +176,39 @@ const RestoreScreen = ({ onRestore, lang = 'ru' }) => {
           {mode === 'master' ? t.optionMaster : t.optionFull}
         </h2>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
-          {mode === 'master' ? 'Введите мастер-ключ' : 'Введите мастер-ключ и пароль SEC'}
+          {mode === 'master' ? 'Введите мастер-ключ' : 'Введите пароль SEC'}
         </p>
       </div>
 
-      {/* Master key — always visible */}
-      <div className="bg-[var(--bg-secondary)] rounded-xl p-4">
-        <p className="text-xs text-[var(--text-secondary)] mb-2 text-center">{t.masterLabel}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {masterKeyBlocks.map((block, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[var(--bg-hover)] text-xs text-[var(--text-secondary)] font-sans flex items-center justify-center font-medium flex-shrink-0">
-                {index + 1}
-              </span>
-              <span className="text-[var(--border-color)] font-light">|</span>
-              <input
-                ref={(el) => (masterInputRefs.current[index] = el)}
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={block}
-                onChange={(e) => handleMasterChange(index, e.target.value)}
-                onKeyDown={(e) => handleMasterKeyDown(index, e)}
-                placeholder="000000"
-                className="flex-1 min-w-0 px-2 py-2 text-center font-mono text-lg font-bold text-[var(--text-primary)] border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                maxLength={6}
-                autoFocus={index === 0}
-              />
-            </div>
-          ))}
+      {mode === 'master' && (
+        <div className="bg-[var(--bg-secondary)] rounded-xl p-4">
+          <p className="text-xs text-[var(--text-secondary)] mb-2 text-center">{t.masterLabel}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {masterKeyBlocks.map((block, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-[var(--bg-hover)] text-xs text-[var(--text-secondary)] font-sans flex items-center justify-center font-medium flex-shrink-0">
+                  {index + 1}
+                </span>
+                <span className="text-[var(--border-color)] font-light">|</span>
+                <input
+                  ref={(el) => (masterInputRefs.current[index] = el)}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={block}
+                  onChange={(e) => handleMasterChange(index, e.target.value)}
+                  onKeyDown={(e) => handleMasterKeyDown(index, e)}
+                  placeholder="000000"
+                  className="flex-1 min-w-0 px-2 py-2 text-center font-mono text-lg font-bold text-[var(--text-primary)] border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  maxLength={6}
+                  autoFocus={index === 0}
+                />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* SEC password — only in full mode */}
       {mode === 'full' && (
         <div className="bg-[var(--bg-secondary)] rounded-xl p-4">
           <p className="text-xs text-[var(--text-secondary)] mb-2 text-center">{t.secLabel}</p>
