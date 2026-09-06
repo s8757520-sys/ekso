@@ -22,7 +22,7 @@ const chats = [
   { id: 6, name: 'Вика', lastMessage: 'Сили обороны отримали наказ...', time: '07:15', avatar: 'В' },
 ];
 
-const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout }) => {
+const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout, isNewSession = false }) => {
   const [activeTab, setActiveTab] = useState('chats');
   const [selectedChat, setSelectedChat] = useState(null);
   const [selectedChatName, setSelectedChatName] = useState('');
@@ -38,12 +38,12 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout }) => {
     const loadPin = async () => {
       const pin = await getPinFromDB();
       setStoredPin(pin);
-      if (pin) {
+      if (pin && !isNewSession) {
         setIsPinRequired(true);
       }
     };
     loadPin();
-  }, []);
+  }, [isNewSession]);
 
   const handlePinChange = (index, value) => {
     if (!/^\d*$/.test(value)) return;
@@ -152,9 +152,9 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout }) => {
 
       <Footer activeTab={activeTab} onTabChange={setActiveTab} lang={lang} />
 
-      {/* Прозрачный попап для PIN — в стиле PinScreen */}
+      {/* Прозрачный попап для PIN — затемнённый фон */}
       {isPinRequired && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
             <div className="text-center mb-6">
               <h3 className="text-xl font-semibold text-[var(--text-primary)]">
