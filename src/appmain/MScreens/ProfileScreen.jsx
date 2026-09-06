@@ -2,92 +2,198 @@
  * File: ProfileScreen.jsx
  * Date: 2026-09-06
  * Purpose: User profile screen
- * Description: Shows nickname, public key, avatar, status, copy button
+ * Description: Shows avatar, nickname, editable name, stats, security, and actions
  * Author: Ekso Team
  */
 
 import { useState } from 'react';
 
-const ProfileScreen = ({ nickname, publicKey, lang = 'ru' }) => {
+const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
   const [copied, setCopied] = useState(false);
+  const [displayName, setDisplayName] = useState(nickname || '');
+  const [isEditingName, setIsEditingName] = useState(false);
 
   const texts = {
     ru: {
       title: 'Мой профиль',
       nickname: 'Никнейм',
-      publicKey: 'Публичный ключ',
+      name: 'Имя',
+      edit: 'Редактировать',
+      save: 'Сохранить',
+      cancel: 'Отмена',
+      statusOnline: 'онлайн',
+      contacts: 'Контакты',
+      channels: 'Каналы',
+      notifications: 'Уведомления',
+      changePin: 'Сменить PIN',
+      share: 'Поделиться профилем',
+      qr: 'QR-код',
       copy: 'Копировать',
       copied: 'Скопировано!',
-      statusOnline: 'онлайн',
-      editProfile: 'Редактировать профиль',
     },
     en: {
       title: 'My Profile',
       nickname: 'Nickname',
-      publicKey: 'Public Key',
+      name: 'Name',
+      edit: 'Edit',
+      save: 'Save',
+      cancel: 'Cancel',
+      statusOnline: 'online',
+      contacts: 'Contacts',
+      channels: 'Channels',
+      notifications: 'Notifications',
+      changePin: 'Change PIN',
+      share: 'Share profile',
+      qr: 'QR Code',
       copy: 'Copy',
       copied: 'Copied!',
-      statusOnline: 'online',
-      editProfile: 'Edit Profile',
     }
   };
 
   const t = texts[lang] || texts.ru;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(publicKey || '');
+    navigator.clipboard.writeText(`https://ekso.me/@${nickname}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const displayKey = publicKey
-    ? `${publicKey.slice(0, 12)}...${publicKey.slice(-6)}`
-    : '—';
+  const handleShare = () => {
+    const url = `https://ekso.me/@${nickname}`;
+    navigator.clipboard.writeText(url);
+    alert(lang === 'ru' ? 'Ссылка скопирована!' : 'Link copied!');
+  };
+
+  const handleSaveName = () => {
+    setIsEditingName(false);
+    // TODO: сохранять имя в IndexedDB
+  };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] p-4">
-      <div className="max-w-md mx-auto bg-[var(--bg-secondary)] rounded-2xl shadow-xl p-6">
+    <div className="min-h-screen bg-[var(--bg-primary)] p-4 md:p-6">
+      <div className="max-w-2xl mx-auto bg-[var(--bg-secondary)] rounded-2xl shadow-xl p-6 md:p-8">
         {/* Заголовок */}
-        <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-6">
-          {t.title}
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <button 
+            onClick={onBack} 
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition text-sm md:text-base"
+          >
+            ← {lang === 'ru' ? 'Назад' : 'Back'}
+          </button>
+          <h2 className="text-xl md:text-2xl font-semibold text-[var(--text-primary)]">{t.title}</h2>
+          <div className="w-16"></div>
+        </div>
 
-        {/* Аватар + Никнейм + Статус */}
-        <div className="flex flex-col items-center mb-6">
-          <div className="w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center text-white text-3xl font-bold mb-3">
+        {/* Аватар + Никнейм + Имя + Статус */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-blue-500 flex items-center justify-center text-white text-3xl md:text-4xl font-bold mb-3">
             {nickname ? nickname.charAt(0).toUpperCase() : '?'}
           </div>
-          <p className="text-xl font-semibold text-[var(--text-primary)]">
-            {nickname || 'Гость'}
+          
+          {/* Никнейм */}
+          <p className="text-lg md:text-xl font-semibold text-[var(--text-primary)]">
+            @{nickname || 'Гость'}
           </p>
+          
+          {/* Имя (редактируемое) */}
+          <div className="flex items-center gap-2 mt-1">
+            {isEditingName ? (
+              <>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="px-3 py-1 text-sm border border-[var(--border-color)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+                <button
+                  onClick={handleSaveName}
+                  className="text-sm text-blue-500 hover:text-blue-600 transition"
+                >
+                  {t.save}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditingName(false);
+                    setDisplayName(nickname || '');
+                  }}
+                  className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition"
+                >
+                  {t.cancel}
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-sm text-[var(--text-secondary)]">{displayName || nickname || 'Гость'}</span>
+                <button
+                  onClick={() => setIsEditingName(true)}
+                  className="text-xs text-blue-500 hover:text-blue-600 transition"
+                >
+                  ✏️ {t.edit}
+                </button>
+              </>
+            )}
+          </div>
+          
+          {/* Статус */}
           <div className="flex items-center gap-1.5 mt-1">
             <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
             <span className="text-sm text-green-500">{t.statusOnline}</span>
           </div>
         </div>
 
-        {/* Публичный ключ */}
-        <div className="bg-[var(--bg-primary)] rounded-xl p-4 mb-4">
-          <p className="text-xs text-[var(--text-secondary)] mb-1">{t.publicKey}</p>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-mono text-[var(--text-primary)] break-all">
-              {displayKey}
-            </p>
-            <button
-              onClick={handleCopy}
-              className="flex-shrink-0 px-3 py-1 text-sm bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-lg transition"
-            >
-              {copied ? t.copied : t.copy}
-            </button>
+        {/* Статистика */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer">
+            <p className="text-xl md:text-2xl font-bold text-[var(--text-primary)]">12</p>
+            <p className="text-xs text-[var(--text-secondary)]">{t.contacts}</p>
+          </div>
+          <div className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer">
+            <p className="text-xl md:text-2xl font-bold text-[var(--text-primary)]">5</p>
+            <p className="text-xs text-[var(--text-secondary)]">{t.channels}</p>
+          </div>
+          <div className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer">
+            <p className="text-xl md:text-2xl font-bold text-[var(--text-primary)]">3</p>
+            <p className="text-xs text-[var(--text-secondary)]">{t.notifications}</p>
           </div>
         </div>
 
-        {/* Кнопка редактирования */}
-        <button
-          className="w-full py-2.5 border border-[var(--border-color)] text-[var(--text-primary)] rounded-xl hover:bg-[var(--bg-hover)] transition font-medium"
-        >
-          {t.editProfile}
-        </button>
+        {/* Безопасность и действия */}
+        <div className="space-y-2">
+          <button
+            onClick={() => alert('Смена PIN')}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--border-color)] hover:bg-[var(--bg-hover)] transition text-sm"
+          >
+            <span className="text-[var(--text-primary)]">🔐 {t.changePin}</span>
+            <span className="text-[var(--text-secondary)]">→</span>
+          </button>
+
+          <button
+            onClick={handleShare}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--border-color)] hover:bg-[var(--bg-hover)] transition text-sm"
+          >
+            <span className="text-[var(--text-primary)]">🔗 {t.share}</span>
+            <span className="text-[var(--text-secondary)]">→</span>
+          </button>
+
+          <button
+            onClick={() => alert('QR-код')}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--border-color)] hover:bg-[var(--bg-hover)] transition text-sm"
+          >
+            <span className="text-[var(--text-primary)]">📱 {t.qr}</span>
+            <span className="text-[var(--text-secondary)]">→</span>
+          </button>
+        </div>
+
+        {/* Футер с копирайтом */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={handleCopy}
+            className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition"
+          >
+            {copied ? t.copied : `${t.copy} @${nickname}`}
+          </button>
+        </div>
       </div>
     </div>
   );
