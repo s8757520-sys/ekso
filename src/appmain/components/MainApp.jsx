@@ -56,7 +56,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout, isNewSessi
         if (storedPin) {
           setIsPinRequired(true);
         }
-      }, 10 * 1000); // 10 секунд
+      }, 3 * 60 * 1000); // 3 минуты
     };
 
     const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
