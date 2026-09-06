@@ -251,6 +251,13 @@ function App() {
     window.location.reload();
   };
 
+  const handleNavigate = (page) => {
+    console.log('Navigate to:', page);
+    if (page === 'logout') {
+      handleLogout();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       {step === 'main' ? (
@@ -259,6 +266,7 @@ function App() {
           publicKey={masterKeyData?.wallet?.publicKey}
           lang={lang}
           onLogout={handleLogout}
+          onNavigate={handleNavigate}
           isNewSession={step === 'main' && masterKeyData !== null}
         />
       ) : (
