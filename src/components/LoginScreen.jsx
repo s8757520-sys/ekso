@@ -147,7 +147,7 @@ const LoginScreen = ({ onLogin, onRestore, lang = 'ru' }) => {
       {attempts >= SHOW_RESTORE_AFTER && attempts < MAX_ATTEMPTS && (
         <button
           onClick={onRestore}
-          className="w-full text-sm text-[var(--text-link)] hover:underline transition"
+          className="w-full py-3 px-4 border border-[var(--border-color)] rounded-lg text-[var(--text-link)] hover:bg-[var(--bg-hover)] transition-colors font-medium"
         >
           {t.restore}
         </button>
