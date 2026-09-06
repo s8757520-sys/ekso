@@ -152,7 +152,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout, isNewSessi
 
       <Footer activeTab={activeTab} onTabChange={setActiveTab} lang={lang} />
 
-      {/* Прозрачный попап для PIN — затемнённый фон */}
+      {/* Попап для PIN — затемнённый фон */}
       {isPinRequired && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
