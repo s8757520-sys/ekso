@@ -245,7 +245,9 @@ function App() {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
+    // Удаляем только сессионные данные, оставляем тему и язык
+    localStorage.removeItem('ekso-lang');
+    localStorage.removeItem('ekso-session');
     sessionStorage.clear();
     setStep('nickname');
     window.location.reload();
