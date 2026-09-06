@@ -34,6 +34,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout, isNewSessi
   const [storedPin, setStoredPin] = useState(null);
   const inputRefs = useRef([]);
 
+  // Загружаем сохранённый PIN
   useEffect(() => {
     const loadPin = async () => {
       const pin = await getPinFromDB();
@@ -44,6 +45,30 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onLogout, isNewSessi
     };
     loadPin();
   }, [isNewSession]);
+
+  // Таймер бездействия (10 секунд для проверки)
+  useEffect(() => {
+    let inactivityTimer;
+
+    const resetTimer = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        if (storedPin) {
+          setIsPinRequired(true);
+        }
+      }, 10 * 1000); // 10 секунд
+    };
+
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach(event => window.addEventListener(event, resetTimer));
+
+    resetTimer();
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      events.forEach(event => window.removeEventListener(event, resetTimer));
+    };
+  }, [storedPin]);
 
   const handlePinChange = (index, value) => {
     if (!/^\d*$/.test(value)) return;
