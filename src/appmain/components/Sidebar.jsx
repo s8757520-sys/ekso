@@ -138,7 +138,7 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
                 }}
                 className={`w-full px-4 py-3 text-left flex items-center gap-3 transition text-sm ${
                   isActive
-                    ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]'
+                    ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
                     : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                 }`}
               >
