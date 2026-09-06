@@ -6,12 +6,22 @@
  * Author: Ekso Team
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
   const [copied, setCopied] = useState(false);
-  const [displayName, setDisplayName] = useState(nickname || '');
+  const [displayName, setDisplayName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
+
+  // Загружаем имя из localStorage при монтировании
+  useEffect(() => {
+    const savedName = localStorage.getItem('ekso_display_name');
+    if (savedName) {
+      setDisplayName(savedName);
+    } else if (nickname) {
+      setDisplayName(nickname);
+    }
+  }, [nickname]);
 
   const texts = {
     ru: {
@@ -30,6 +40,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
       qr: 'QR-код',
       copy: 'Копировать',
       copied: 'Скопировано!',
+      placeholder: 'Введите ваше имя',
     },
     en: {
       title: 'My Profile',
@@ -47,6 +58,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
       qr: 'QR Code',
       copy: 'Copy',
       copied: 'Copied!',
+      placeholder: 'Enter your name',
     }
   };
 
@@ -66,7 +78,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
 
   const handleSaveName = () => {
     setIsEditingName(false);
-    // TODO: сохранять имя в IndexedDB
+    localStorage.setItem('ekso_display_name', displayName);
   };
 
   return (
@@ -84,62 +96,68 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
           <div className="w-16"></div>
         </div>
 
-        {/* Аватар + Никнейм + Имя + Статус */}
-        <div className="flex flex-col items-center mb-8">
+        {/* Аватар + Статус */}
+        <div className="flex flex-col items-center mb-6">
           <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-blue-500 flex items-center justify-center text-white text-3xl md:text-4xl font-bold mb-3">
             {nickname ? nickname.charAt(0).toUpperCase() : '?'}
           </div>
-          
-          <p className="text-lg md:text-xl font-semibold text-[var(--text-primary)]">
-            @{nickname || 'Гость'}
-          </p>
-          
-          <div className="flex items-center gap-2 mt-1">
-            {isEditingName ? (
-              <>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="px-3 py-1 text-sm border border-[var(--border-color)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-blue-500"
-                  autoFocus
-                />
-                <button
-                  onClick={handleSaveName}
-                  className="text-sm text-blue-500 hover:text-blue-600 transition"
-                >
-                  {t.save}
-                </button>
-                <button
-                  onClick={() => {
-                    setIsEditingName(false);
-                    setDisplayName(nickname || '');
-                  }}
-                  className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition"
-                >
-                  {t.cancel}
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="text-sm text-[var(--text-secondary)]">{displayName || nickname || 'Гость'}</span>
-                <button
-                  onClick={() => setIsEditingName(true)}
-                  className="text-xs text-blue-500 hover:text-blue-600 transition"
-                >
-                  ✏️ {t.edit}
-                </button>
-              </>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-1.5 mt-1">
+          <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
             <span className="text-sm text-green-500">{t.statusOnline}</span>
           </div>
         </div>
 
-        {/* Статистика — иконки + текст (данные подтянутся позже) */}
+        {/* Имя (редактируемое) */}
+        <div className="w-full mb-4">
+          <p className="text-sm text-[var(--text-secondary)] mb-1">{t.name}</p>
+          {isEditingName ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="flex-1 px-4 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={t.placeholder}
+                autoFocus
+              />
+              <button
+                onClick={handleSaveName}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium"
+              >
+                {t.save}
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditingName(false);
+                  setDisplayName(localStorage.getItem('ekso_display_name') || nickname || '');
+                }}
+                className="px-4 py-2 border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-lg transition text-sm"
+              >
+                {t.cancel}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-primary)] rounded-lg">
+              <span className="text-[var(--text-primary)]">{displayName || '—'}</span>
+              <button
+                onClick={() => setIsEditingName(true)}
+                className="text-sm text-blue-500 hover:text-blue-600 transition"
+              >
+                ✏️ {t.edit}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Никнейм (неизменяемый) */}
+        <div className="w-full mb-6">
+          <p className="text-sm text-[var(--text-secondary)] mb-1">{t.nickname}</p>
+          <div className="px-4 py-3 bg-[var(--bg-primary)] rounded-lg">
+            <span className="text-[var(--text-primary)]">@{nickname || 'Гость'}</span>
+          </div>
+        </div>
+
+        {/* Статистика — иконки + текст */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer">
             <div className="text-2xl mb-1">👥</div>
@@ -182,7 +200,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
           </button>
         </div>
 
-        {/* Футер с копирайтом */}
+        {/* Футер */}
         <div className="mt-6 text-center">
           <button
             onClick={handleCopy}
