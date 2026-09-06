@@ -43,13 +43,13 @@ const EntryScreen = ({ onSelect, lang = 'ru' }) => {
     <div className="space-y-3 pt-4">
       {items.map((item) => (
         <button
-          key={item.id}
-          onClick={() => onSelect(item.id)}
-          className="w-full text-center p-4 border border-gray-200 rounded-xl hover:bg-blue-50 active:bg-blue-100 transition-all"
-        >
-          <div className="font-medium text-gray-800">{item.label}</div>
-          <div className="text-sm text-gray-400">{item.desc}</div>
-        </button>
+  key={item.id}
+  onClick={() => onSelect(item.id)}
+  className="w-full text-center p-4 border border-[var(--border-color)] rounded-xl hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-all"
+>
+  <div className="font-medium text-[var(--text-primary)]">{item.label}</div>
+  <div className="text-sm text-[var(--text-secondary)]">{item.desc}</div>
+</button>
       ))}
     </div>
   );
