@@ -12,11 +12,11 @@ const Header = ({ onMenuClick }) => {
   const { theme, toggleTheme } = useTheme();
 
   const logoSrc = theme === 'light'
-    ? '/ekso-logo-bl.svg'
-    : '/ekso-logo-w.svg';
+    ? '/images/ekso/ekso-logo-bl.svg'
+    : '/images/ekso/ekso-logo-w.svg';
 
   return (
-    <div className="bg-[var(--bg-secondary)] px-3 sm:px-6 py-4 flex items-center justify-between border-b border-[var(--border-color)]">
+    <div className="sticky top-0 z-10 bg-[var(--bg-secondary)] px-3 sm:px-6 py-4 flex items-center justify-between border-b border-[var(--border-color)]">
       <span
         onClick={onMenuClick}
         className="text-2xl sm:text-3xl text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text-primary)] transition"
@@ -27,7 +27,7 @@ const Header = ({ onMenuClick }) => {
       <img
         src={logoSrc}
         alt="Ekso"
-        className="h-12 sm:h-16 w-auto"
+        className="h-8 sm:h-10 w-auto"
       />
 
       <button
