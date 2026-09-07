@@ -4,15 +4,25 @@
  * Purpose: Chat interface with WebSocket integration — отправка на сервер
  * Description: Displays messages, sends/receives via WebSocket
  * Author: Ekso Team
+ * Updated: Добавлены recipientDisplayName и recipientAvatar для отображения в шапке чата
  */
 
 import { useState, useEffect } from 'react';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 
-const ChatScreen = ({ lang = 'ru', nickname = 'Гость', recipient = 'alex' }) => {
+const ChatScreen = ({ 
+  lang = 'ru', 
+  nickname = 'Гость', 
+  recipient = 'alex',
+  recipientDisplayName,
+  recipientAvatar 
+}) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const { isConnected, sendMessage, lastMessage } = useWebSocket();
+
+  // Определяем отображаемое имя (displayName или recipient)
+  const displayName = recipientDisplayName || recipient;
 
   const texts = {
     ru: {
@@ -55,7 +65,6 @@ const ChatScreen = ({ lang = 'ru', nickname = 'Гость', recipient = 'alex' }
     const now = new Date();
     const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
 
-    // Добавляем сообщение в локальный список
     setMessages((prev) => [
       ...prev,
       {
@@ -66,7 +75,6 @@ const ChatScreen = ({ lang = 'ru', nickname = 'Гость', recipient = 'alex' }
       },
     ]);
 
-    // Отправляем на сервер
     sendMessage('chat_message', {
       from: nickname,
       to: recipient,
@@ -80,12 +88,21 @@ const ChatScreen = ({ lang = 'ru', nickname = 'Гость', recipient = 'alex' }
 
   return (
     <div className="flex flex-col h-[400px] sm:h-[500px] md:h-[550px] bg-[var(--bg-primary)] rounded-xl overflow-hidden shadow-sm">
+      {/* ШАПКА ЧАТА */}
       <div className="bg-[var(--bg-secondary)] px-3 sm:px-4 py-3 border-b border-[var(--border-color)] flex items-center gap-3 flex-shrink-0">
-        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
-          {recipient.charAt(0).toUpperCase()}
+        {/* Аватарка собеседника */}
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 bg-blue-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
+          {recipientAvatar ? (
+            <img src={recipientAvatar} alt={displayName} className="w-full h-full object-cover" />
+          ) : (
+            <span>{displayName.charAt(0).toUpperCase()}</span>
+          )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-[var(--text-primary)] text-sm sm:text-base">{recipient}</div>
+          {/* Имя собеседника (displayName или recipient) */}
+          <div className="font-semibold text-[var(--text-primary)] text-sm sm:text-base">
+            {displayName}
+          </div>
           <div className={`text-[10px] sm:text-xs ${isConnected ? 'text-green-500' : 'text-gray-400'}`}>
             ● {isConnected ? t.online : t.offline}
           </div>
@@ -93,6 +110,7 @@ const ChatScreen = ({ lang = 'ru', nickname = 'Гость', recipient = 'alex' }
         <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg sm:text-xl">📞</button>
       </div>
 
+      {/* СООБЩЕНИЯ */}
       <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-1">
         {messages.length === 0 && (
           <div className="text-center text-[var(--text-secondary)] text-sm mt-10">
@@ -118,6 +136,7 @@ const ChatScreen = ({ lang = 'ru', nickname = 'Гость', recipient = 'alex' }
         ))}
       </div>
 
+      {/* ПОЛЕ ВВОДА */}
       <div className="bg-[var(--bg-secondary)] p-2 sm:p-3 flex items-center gap-2 border-t border-[var(--border-color)] flex-shrink-0">
         <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg sm:text-xl px-1">😊</button>
         <input
