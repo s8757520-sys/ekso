@@ -4,7 +4,7 @@
  * Purpose: Main application interface after login
  * Description: Displays dashboard with chats, channels, wallet, settings
  * Author: Ekso Team
- * Updated: Список чатов читается из localStorage, отображаются displayName и avatar
+ * Updated: Добавлена загрузка профиля с сервера при входе
  */
 
 import { useState, useEffect } from 'react';
@@ -13,6 +13,7 @@ import Header from './Header';
 import Footer from './Footer';
 import Sidebar from './Sidebar';
 import ProfileScreen from '../MScreens/ProfileScreen';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 // Дефолтные чаты (если в localStorage пусто)
 const defaultChats = [
@@ -34,6 +35,8 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
   const [lang, setLang] = useState(initialLang);
   const [currentScreen, setCurrentScreen] = useState('chats');
   const [chats, setChats] = useState([]);
+
+  const { isConnected, sendMessage, lastMessage } = useWebSocket();
 
   // Загружаем чаты из localStorage при монтировании
   useEffect(() => {
@@ -58,6 +61,28 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
       localStorage.setItem('contacts', JSON.stringify(chats));
     }
   }, [chats]);
+
+  // ========== ЗАГРУЗКА ПРОФИЛЯ С СЕРВЕРА ==========
+  useEffect(() => {
+    if (isConnected && nickname) {
+      sendMessage('get_profile', { nickname });
+    }
+  }, [isConnected, nickname]);
+
+  // Сохраняем полученный профиль в localStorage
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'get_profile_result') {
+      const data = lastMessage.payload;
+      if (data.profile) {
+        if (data.profile.displayName) {
+          localStorage.setItem('ekso_display_name', data.profile.displayName);
+        }
+        if (data.profile.avatar) {
+          localStorage.setItem('ekso_avatar', data.profile.avatar);
+        }
+      }
+    }
+  }, [lastMessage]);
 
   const openChat = (chat) => {
     setSelectedChat(chat.id);
