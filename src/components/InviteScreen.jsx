@@ -90,7 +90,7 @@ const InviteScreen = ({ lang = 'ru', nickname: currentUser, onAddContact, onClos
     // Задержка перед закрытием, чтобы запрос успел уйти
     setTimeout(() => {
       onAddContact(profile);
-    }, 500);
+    }, 1000);
   };
 
   const t = {
