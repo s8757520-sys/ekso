@@ -3,14 +3,11 @@
  * Date: 2026-09-07
  * Purpose: Sidebar navigation menu component
  * Author: Ekso Team
- * Updated: 
- *   - Исправлена подсветка активного пункта меню
- *   - Переключатели языка и темы перенесены вниз, к кнопке выхода
- *   - Убран текст у кнопки выхода, оставлена только иконка
  */
 
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const getFullAvatarUrl = (avatar) => {
   if (!avatar) return null;
@@ -45,11 +42,8 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
     updateProfileData();
   }, [nickname, isOpen]);
 
-  // Слушаем событие обновления профиля
   useEffect(() => {
-    const handleProfileUpdate = () => {
-      updateProfileData();
-    };
+    const handleProfileUpdate = () => updateProfileData();
     window.addEventListener('profileUpdated', handleProfileUpdate);
     return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
   }, []);
@@ -127,7 +121,6 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
       {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />}
       <div className={`fixed top-0 left-0 h-full w-72 bg-[var(--bg-secondary)] z-50 shadow-xl transform transition-transform duration-300 flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         
-        {/* Верхняя часть: профиль */}
         <div className="p-4 border-b border-[var(--border-color)] relative flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative flex-shrink-0">
@@ -150,7 +143,6 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
           <button onClick={onClose} className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xl">✕</button>
         </div>
 
-        {/* Список меню */}
         <div className="flex-1 overflow-y-auto py-2">
           {menuItems.map((item) => (
             <button
@@ -168,10 +160,8 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
           ))}
         </div>
 
-        {/* Нижняя часть: иконки (Тема, Язык, Выход) */}
         <div className="px-4 py-3 border-t border-[var(--border-color)] flex-shrink-0">
           <div className="flex items-center justify-around">
-            {/* Переключатель темы */}
             <button
               onClick={toggleTheme}
               className="w-12 h-12 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] hover:bg-[var(--bg-hover)] transition flex items-center justify-center text-2xl"
@@ -180,7 +170,6 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
               {theme === 'light' ? '🌙' : '☀️'}
             </button>
 
-            {/* Переключатель языка */}
             <button
               onClick={toggleLanguage}
               className="w-12 h-12 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] hover:bg-[var(--bg-hover)] transition flex items-center justify-center text-2xl"
@@ -189,7 +178,6 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
               {lang === 'ru' ? '🇬🇧' : '🇷🇺'}
             </button>
 
-            {/* Кнопка выхода (только иконка) */}
             <button
               onClick={handleLogoutClick}
               className="w-12 h-12 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] hover:bg-[var(--bg-hover)] transition flex items-center justify-center text-2xl"
@@ -201,19 +189,16 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
         </div>
       </div>
 
-      {/* Модалка выхода */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{t.logoutTitle}</h3>
-            <p className="text-sm text-[var(--text-secondary)] mb-4">{t.logoutDesc}</p>
-            <div className="flex gap-3">
-              <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-2 px-4 rounded-lg border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition">{t.cancel}</button>
-              <button onClick={handleConfirmLogout} className="flex-1 py-2 px-4 rounded-lg bg-red-500 text-white hover:bg-red-600 transition">{t.confirmLogout}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+        title={t.logoutTitle}
+        message={t.logoutDesc}
+        confirmText={t.confirmLogout}
+        cancelText={t.cancel}
+        lang={lang}
+      />
     </>
   );
 };
