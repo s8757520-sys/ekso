@@ -4,6 +4,9 @@
  * Purpose: User profile screen
  * Description: Shows avatar, nickname, editable full name (sync with server) + avatar upload
  * Author: Ekso Team
+ * Updated: 
+ *   - Исправлены кнопки редактора имени (адаптация под мобильные)
+ *   - Сокращён текст "Уведомления" -> "Уведомл." на мобильных
  */
 
 import { useState, useEffect } from 'react';
@@ -44,7 +47,6 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
           localStorage.setItem('ekso_display_name', data.profile.displayName);
         }
         if (data.profile.avatar) {
-          // СОХРАНЯЕМ ПОЛНЫЙ URL СРАЗУ
           const fullUrl = getFullAvatarUrl(data.profile.avatar);
           setAvatar(fullUrl);
           localStorage.setItem('ekso_avatar', fullUrl);
@@ -85,6 +87,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
       contacts: 'Контакты',
       channels: 'Каналы',
       notifications: 'Уведомления',
+      notificationsShort: 'Уведомл.', // сокращённый вариант для мобильных
       changePin: 'Сменить PIN',
       share: 'Поделиться профилем',
       qr: 'QR-код',
@@ -105,6 +108,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
       contacts: 'Contacts',
       channels: 'Channels',
       notifications: 'Notifications',
+      notificationsShort: 'Notif.',
       changePin: 'Change PIN',
       share: 'Share profile',
       qr: 'QR Code',
@@ -232,7 +236,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
           </p>
         </div>
 
-        {/* Имя (редактируемое) — адаптировано для мобильных */}
+        {/* Имя (редактируемое) — ИСПРАВЛЕНЫ КНОПКИ ДЛЯ МОБИЛЬНЫХ */}
         <div className="w-full mb-6">
           <p className="text-sm text-[var(--text-secondary)] mb-1">{t.name}</p>
           {isEditingName ? (
@@ -241,11 +245,11 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="flex-1 px-4 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 placeholder={t.placeholder}
                 autoFocus
               />
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto">
                 <button
                   onClick={handleSaveName}
                   className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium"
@@ -282,7 +286,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
           )}
         </div>
 
-        {/* Статистика */}
+        {/* Статистика — ИСПРАВЛЕНА ССЫЛКА "Уведомления" */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <button
             onClick={() => alert(lang === 'ru' ? 'Контакты' : 'Contacts')}
@@ -303,7 +307,10 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
             className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer"
           >
             <div className="text-2xl mb-1">🔔</div>
-            <p className="text-xs text-[var(--text-secondary)]">{t.notifications}</p>
+            <p className="text-xs text-[var(--text-secondary)] break-words">
+              <span className="hidden sm:inline">{t.notifications}</span>
+              <span className="sm:hidden">{t.notificationsShort}</span>
+            </p>
           </button>
         </div>
 
