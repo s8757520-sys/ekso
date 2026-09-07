@@ -1,26 +1,67 @@
 /**
  * File: ProfileScreen.jsx
- * Date: 2026-09-06
+ * Date: 2026-09-07
  * Purpose: User profile screen
- * Description: Shows avatar, nickname (as text), editable name (with pencil icon), stats, security, actions
+ * Description: Shows avatar, nickname, editable full name (sync with server) + avatar upload
  * Author: Ekso Team
  */
 
 import { useState, useEffect } from 'react';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
   const [copied, setCopied] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [avatar, setAvatar] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
+  const { isConnected, sendMessage, lastMessage } = useWebSocket();
+
+  // Загрузка профиля с сервера
   useEffect(() => {
-    const savedName = localStorage.getItem('ekso_display_name');
-    if (savedName) {
-      setDisplayName(savedName);
-    } else if (nickname) {
-      setDisplayName(nickname);
+    if (isConnected && nickname) {
+      sendMessage('get_profile', { nickname });
     }
-  }, [nickname]);
+  }, [isConnected, nickname]);
+
+  // Обработка ответа от сервера
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'get_profile_result') {
+      const data = lastMessage.payload;
+      if (data.profile) {
+        if (data.profile.displayName) {
+          setDisplayName(data.profile.displayName);
+          localStorage.setItem('ekso_display_name', data.profile.displayName);
+        }
+        if (data.profile.avatar) {
+          setAvatar(data.profile.avatar);
+          localStorage.setItem('ekso_avatar', data.profile.avatar);
+        }
+      } else {
+        const saved = localStorage.getItem('ekso_display_name');
+        if (saved) setDisplayName(saved);
+        else if (nickname) setDisplayName(nickname);
+        
+        const savedAvatar = localStorage.getItem('ekso_avatar');
+        if (savedAvatar) setAvatar(savedAvatar);
+      }
+      setProfileLoaded(true);
+    }
+  }, [lastMessage, nickname]);
+
+  // Локальное сохранение
+  useEffect(() => {
+    if (!profileLoaded) {
+      const saved = localStorage.getItem('ekso_display_name');
+      if (saved) setDisplayName(saved);
+      else if (nickname) setDisplayName(nickname);
+      
+      const savedAvatar = localStorage.getItem('ekso_avatar');
+      if (savedAvatar) setAvatar(savedAvatar);
+    }
+  }, [nickname, profileLoaded]);
 
   const texts = {
     ru: {
@@ -30,6 +71,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
       save: 'Сохранить',
       cancel: 'Отмена',
       statusOnline: 'онлайн',
+      statusOffline: 'офлайн',
       contacts: 'Контакты',
       channels: 'Каналы',
       notifications: 'Уведомления',
@@ -39,14 +81,17 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
       copy: 'Копировать',
       copied: 'Скопировано!',
       placeholder: 'Введите ваше имя',
+      saving: 'Сохранение...',
+      uploadAvatar: 'Загрузить аватар',
     },
     en: {
       title: 'My Profile',
       nickname: 'Nickname',
-      name: 'Name',
+      name: 'Full Name',
       save: 'Save',
       cancel: 'Cancel',
       statusOnline: 'online',
+      statusOffline: 'offline',
       contacts: 'Contacts',
       channels: 'Channels',
       notifications: 'Notifications',
@@ -55,7 +100,9 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
       qr: 'QR Code',
       copy: 'Copy',
       copied: 'Copied!',
-      placeholder: 'Enter your name',
+      placeholder: 'Enter your full name',
+      saving: 'Saving...',
+      uploadAvatar: 'Upload avatar',
     }
   };
 
@@ -74,8 +121,50 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
   };
 
   const handleSaveName = () => {
+    if (!displayName.trim()) {
+      alert(lang === 'ru' ? 'Имя не может быть пустым' : 'Name cannot be empty');
+      return;
+    }
     setIsEditingName(false);
     localStorage.setItem('ekso_display_name', displayName);
+
+    if (isConnected && nickname) {
+      sendMessage('update_profile', {
+        nickname: nickname,
+        displayName: displayName,
+      });
+    }
+  };
+
+  const handleAvatarUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert(lang === 'ru' ? 'Файл слишком большой (макс 5 МБ)' : 'File too large (max 5 MB)');
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result;
+      setAvatar(base64);
+      localStorage.setItem('ekso_avatar', base64);
+
+      if (isConnected && nickname) {
+        sendMessage('update_profile', {
+          nickname: nickname,
+          avatar: base64,
+        });
+      }
+      setIsUploading(false);
+    };
+    reader.onerror = () => {
+      alert(lang === 'ru' ? 'Ошибка чтения файла' : 'Error reading file');
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -95,23 +184,49 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
 
         {/* Аватар + Статус + Никнейм */}
         <div className="flex flex-col items-center mb-6">
-          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-blue-500 flex items-center justify-center text-white text-3xl md:text-4xl font-bold mb-3">
-            {nickname ? nickname.charAt(0).toUpperCase() : '?'}
+          <div className="relative">
+            <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-blue-500 flex items-center justify-center text-white text-3xl md:text-4xl font-bold mb-3 overflow-hidden">
+              {avatar ? (
+                <img src={avatar} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                displayName ? displayName.charAt(0).toUpperCase() : (nickname ? nickname.charAt(0).toUpperCase() : '?')
+              )}
+            </div>
+            <label className="absolute bottom-2 right-0 bg-blue-500 hover:bg-blue-600 rounded-full p-1.5 cursor-pointer shadow-lg transition">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+                disabled={isUploading}
+              />
+            </label>
+            {isUploading && (
+              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                <div className="text-white text-sm">⏳</div>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
-            <span className="text-sm text-green-500">{t.statusOnline}</span>
+            <span className={`w-2 h-2 rounded-full inline-block ${isConnected ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+            <span className={`text-sm ${isConnected ? 'text-green-500' : 'text-gray-400'}`}>
+              {isConnected ? t.statusOnline : t.statusOffline}
+            </span>
           </div>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
             @{nickname || 'Гость'}
           </p>
         </div>
 
-        {/* Имя (редактируемое) — с иконкой карандаша */}
+        {/* Имя (редактируемое) — адаптировано для мобильных */}
         <div className="w-full mb-6">
           <p className="text-sm text-[var(--text-secondary)] mb-1">{t.name}</p>
           {isEditingName ? (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <input
                 type="text"
                 value={displayName}
@@ -120,21 +235,24 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
                 placeholder={t.placeholder}
                 autoFocus
               />
-              <button
-                onClick={handleSaveName}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium"
-              >
-                {t.save}
-              </button>
-              <button
-                onClick={() => {
-                  setIsEditingName(false);
-                  setDisplayName(localStorage.getItem('ekso_display_name') || nickname || '');
-                }}
-                className="px-4 py-2 border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-lg transition text-sm"
-              >
-                {t.cancel}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveName}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium"
+                >
+                  {t.save}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditingName(false);
+                    const saved = localStorage.getItem('ekso_display_name');
+                    setDisplayName(saved || nickname || '');
+                  }}
+                  className="flex-1 sm:flex-none px-4 py-2 border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-lg transition text-sm"
+                >
+                  {t.cancel}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-primary)] rounded-lg">
@@ -147,28 +265,42 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
               </button>
             </div>
           )}
+          {!isConnected && (
+            <p className="text-xs text-yellow-500 mt-1">
+              ⚠️ {lang === 'ru' ? 'Нет подключения к серверу. Данные сохранятся локально.' : 'No server connection. Data will be saved locally.'}
+            </p>
+          )}
         </div>
 
         {/* Статистика */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer">
+          <button
+            onClick={() => alert(lang === 'ru' ? 'Контакты' : 'Contacts')}
+            className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer"
+          >
             <div className="text-2xl mb-1">👥</div>
             <p className="text-xs text-[var(--text-secondary)]">{t.contacts}</p>
-          </div>
-          <div className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer">
+          </button>
+          <button
+            onClick={() => alert(lang === 'ru' ? 'Каналы' : 'Channels')}
+            className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer"
+          >
             <div className="text-2xl mb-1">📢</div>
             <p className="text-xs text-[var(--text-secondary)]">{t.channels}</p>
-          </div>
-          <div className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer">
+          </button>
+          <button
+            onClick={() => alert(lang === 'ru' ? 'Уведомления' : 'Notifications')}
+            className="bg-[var(--bg-primary)] rounded-xl p-3 text-center hover:bg-[var(--bg-hover)] transition cursor-pointer"
+          >
             <div className="text-2xl mb-1">🔔</div>
             <p className="text-xs text-[var(--text-secondary)]">{t.notifications}</p>
-          </div>
+          </button>
         </div>
 
         {/* Безопасность и действия */}
         <div className="space-y-2">
           <button
-            onClick={() => alert('Смена PIN')}
+            onClick={() => alert(lang === 'ru' ? 'Смена PIN' : 'Change PIN')}
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--border-color)] hover:bg-[var(--bg-hover)] transition text-sm"
           >
             <span className="text-[var(--text-primary)]">🔐 {t.changePin}</span>
@@ -184,7 +316,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
           </button>
 
           <button
-            onClick={() => alert('QR-код')}
+            onClick={() => alert(lang === 'ru' ? 'QR-код' : 'QR Code')}
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--border-color)] hover:bg-[var(--bg-hover)] transition text-sm"
           >
             <span className="text-[var(--text-primary)]">📱 {t.qr}</span>
