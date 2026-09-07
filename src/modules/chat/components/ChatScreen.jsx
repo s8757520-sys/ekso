@@ -4,11 +4,21 @@
  * Purpose: Chat interface with WebSocket integration — отправка на сервер
  * Description: Displays messages, sends/receives via WebSocket
  * Author: Ekso Team
- * Updated: Добавлены recipientDisplayName и recipientAvatar для отображения в шапке чата
+ * Updated: 
+ *   - Добавлены recipientDisplayName и recipientAvatar для отображения в шапке чата
+ *   - Автоматическое добавление https://ekso.me к путям аватарок
  */
 
 import { useState, useEffect } from 'react';
 import { useWebSocket } from '../../../hooks/useWebSocket';
+
+// Функция для получения полного URL аватарки
+const getFullAvatarUrl = (avatar) => {
+  if (!avatar) return null;
+  if (avatar.startsWith('http')) return avatar;
+  if (avatar.startsWith('/avatars/')) return `https://ekso.me${avatar}`;
+  return avatar;
+};
 
 const ChatScreen = ({ 
   lang = 'ru', 
@@ -23,6 +33,7 @@ const ChatScreen = ({
 
   // Определяем отображаемое имя (displayName или recipient)
   const displayName = recipientDisplayName || recipient;
+  const avatarUrl = getFullAvatarUrl(recipientAvatar);
 
   const texts = {
     ru: {
@@ -92,8 +103,8 @@ const ChatScreen = ({
       <div className="bg-[var(--bg-secondary)] px-3 sm:px-4 py-3 border-b border-[var(--border-color)] flex items-center gap-3 flex-shrink-0">
         {/* Аватарка собеседника */}
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 bg-blue-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
-          {recipientAvatar ? (
-            <img src={recipientAvatar} alt={displayName} className="w-full h-full object-cover" />
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
           ) : (
             <span>{displayName.charAt(0).toUpperCase()}</span>
           )}
