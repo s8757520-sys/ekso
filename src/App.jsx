@@ -294,7 +294,6 @@ function App() {
       time: '',
     };
 
-    // Сохраняем в localStorage
     const saved = localStorage.getItem('contacts');
     let contacts = saved ? JSON.parse(saved) : [];
     if (!contacts.some(c => c.id === newContact.id)) {
@@ -302,7 +301,6 @@ function App() {
       localStorage.setItem('contacts', JSON.stringify(contacts));
     }
 
-    // Переходим в MainApp
     setIsInvite(false);
     window.history.replaceState({}, document.title, '/');
     setStep('main');
@@ -320,7 +318,6 @@ function App() {
           onClose={() => {
             setIsInvite(false);
             window.history.replaceState({}, document.title, '/');
-            // Если есть сессия — идём в MainApp, иначе в EntryScreen
             if (hasSession) {
               setStep('main');
             } else {
