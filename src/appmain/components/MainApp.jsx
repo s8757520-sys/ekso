@@ -4,7 +4,9 @@
  * Purpose: Main application interface after login
  * Description: Displays dashboard with chats, channels, wallet, settings
  * Author: Ekso Team
- * Updated: Добавлена загрузка профиля с сервера при входе
+ * Updated: 
+ *   - Загрузка профиля с сервера при входе
+ *   - Автоматическое добавление https://ekso.me к путям аватарок
  */
 
 import { useState, useEffect } from 'react';
@@ -24,6 +26,14 @@ const defaultChats = [
   { id: 5, name: 'ФРОЛОВ', lastMessage: 'EcoFactor Support...', time: '08:30', avatar: null },
   { id: 6, name: 'Вика', lastMessage: 'Сили обороны отримали наказ...', time: '07:15', avatar: null },
 ];
+
+// Функция для получения полного URL аватарки
+const getFullAvatarUrl = (avatar) => {
+  if (!avatar) return null;
+  if (avatar.startsWith('http')) return avatar;
+  if (avatar.startsWith('/avatars/')) return `https://ekso.me${avatar}`;
+  return avatar;
+};
 
 const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
   const [activeTab, setActiveTab] = useState('chats');
@@ -78,7 +88,9 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
           localStorage.setItem('ekso_display_name', data.profile.displayName);
         }
         if (data.profile.avatar) {
-          localStorage.setItem('ekso_avatar', data.profile.avatar);
+          // Сохраняем полный URL
+          const fullUrl = getFullAvatarUrl(data.profile.avatar);
+          localStorage.setItem('ekso_avatar', fullUrl);
         }
       }
     }
@@ -88,7 +100,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
     setSelectedChat(chat.id);
     setSelectedChatName(chat.name || chat.id);
     setSelectedChatDisplayName(chat.displayName || chat.name || chat.id);
-    setSelectedChatAvatar(chat.avatar || null);
+    setSelectedChatAvatar(getFullAvatarUrl(chat.avatar));
   };
 
   const toggleSidebar = () => {
@@ -201,10 +213,14 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
               onClick={() => openChat(chat)}
               className="flex items-center gap-3 py-3 border-b border-[var(--border-color)] cursor-pointer hover:bg-[var(--bg-secondary)] transition px-2"
             >
-              {/* Аватарка */}
+              {/* Аватарка с полным URL */}
               <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
                 {chat.avatar ? (
-                  <img src={chat.avatar} alt={chat.displayName || chat.name || chat.id} className="w-full h-full object-cover" />
+                  <img 
+                    src={getFullAvatarUrl(chat.avatar)} 
+                    alt={chat.displayName || chat.name || chat.id} 
+                    className="w-full h-full object-cover" 
+                  />
                 ) : (
                   <span>{(chat.displayName || chat.name || chat.id).charAt(0).toUpperCase()}</span>
                 )}
