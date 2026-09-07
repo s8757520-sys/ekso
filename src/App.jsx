@@ -2,13 +2,11 @@
  * File: App.jsx
  * Date: 2026-09-07
  * Purpose: Main application component for Ekso onboarding
- * Description: Manages routing between onboarding screens.
- * Updated: Added InviteScreen support for /invite?nickname=...
+ * Updated: Added !isInvite to prevent session from blocking invite page
  * Author: Ekso Team
  */
 
 import { useState, useEffect, useRef } from 'react';
-import LanguageToggle from './components/LanguageToggle';
 import { useWebSocket } from './hooks/useWebSocket';
 import PinScreen from './components/PinScreen';
 import MasterKeyScreen from './components/MasterKeyScreen';
@@ -44,7 +42,6 @@ function App() {
 
   const { isConnected, sendMessage, lastMessage } = useWebSocket('wss://ekso.me/ws');
 
-  // ========== ПРОВЕРКА НА ПРИГЛАШЕНИЕ ==========
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const inviteNick = params.get('nickname') || params.get('invite');
@@ -114,12 +111,11 @@ function App() {
     checkBiometrics();
   }, []);
 
-  // Check for existing session on load
   useEffect(() => {
     const checkLocalSession = async () => {
       const data = await loadUserData();
       setHasSession(!!data);
-      if (data) {
+      if (data && !isInvite) {
         console.log('🔐 Existing session found');
         setNickname(data.nickname || '');
         setEntryMode(null);
@@ -129,7 +125,7 @@ function App() {
       }
     };
     checkLocalSession();
-  }, []);
+  }, [isInvite]);
 
   useEffect(() => {
     if (!masterKeyData && !isMasterKeyGenerated.current) {
@@ -161,7 +157,6 @@ function App() {
     }
   };
 
-  // ========== ОБРАБОТКА ВСЕХ СООБЩЕНИЙ ОТ СЕРВЕРА ==========
   useEffect(() => {
     if (!lastMessage) return;
     if (lastMessageRef.current === lastMessage) return;
@@ -283,7 +278,6 @@ function App() {
     }
   };
 
-  // ========== ДОБАВЛЕНИЕ КОНТАКТА ИЗ ПРИГЛАШЕНИЯ ==========
   const handleAddContactFromInvite = (profile) => {
     const newContact = {
       id: profile.nickname,
@@ -306,14 +300,12 @@ function App() {
     setStep('main');
   };
 
-  // ========== РЕНДЕРИНГ ==========
-
-  // Если открыта страница приглашения
   if (isInvite) {
     return (
       <div className="min-h-screen bg-[var(--bg-primary)]">
         <InviteScreen
           lang={lang}
+          nickname={nickname}
           onAddContact={handleAddContactFromInvite}
           onClose={() => {
             setIsInvite(false);
@@ -329,7 +321,6 @@ function App() {
     );
   }
 
-  // Если пользователь в MainApp
   if (step === 'main') {
     return (
       <MainApp
@@ -342,44 +333,33 @@ function App() {
     );
   }
 
-  // Остальные экраны (онбординг)
   return (
     <div className="flex items-center justify-center p-4 min-h-screen bg-[var(--bg-primary)]">
       <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-xl p-6 w-full max-w-md">
-
-        {/* ENTRY SCREEN */}
         {!entryMode && step !== 'login' && (
           <OnboardingLayoutES lang={lang} onToggleLang={toggleLang}>
             <EntryScreen onSelect={handleEntrySelect} lang={lang} hasSession={hasSession} />
           </OnboardingLayoutES>
         )}
 
-        {/* PIN / BIOMETRIC LOGIN */}
         {step === 'login' && (
           <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
-            <LoginScreen
-              onLogin={handleLogin}
-              lang={lang}
-              isBiometricAvailable={isBiometricAvailable}
-            />
+            <LoginScreen onLogin={handleLogin} lang={lang} isBiometricAvailable={isBiometricAvailable} />
           </OnboardingLayout>
         )}
 
-        {/* RESTORE ON NEW DEVICE */}
         {step === 'restore' && (
           <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
             <RestoreScreen onRestore={handleRestore} lang={lang} />
           </OnboardingLayout>
         )}
 
-        {/* WALLET LOGIN */}
         {step === 'walletLogin' && (
           <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
             <WalletLoginScreen onLogin={handleWalletLogin} lang={lang} />
           </OnboardingLayout>
         )}
 
-        {/* CREATE ACCOUNT — NICKNAME */}
         {entryMode === 'create' && step === 'nickname' && (
           <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
             <NicknameScreen
@@ -394,54 +374,26 @@ function App() {
           </OnboardingLayout>
         )}
 
-        {/* MASTER KEY */}
         {step === 'masterKey' && masterKeyData && (
-          <MasterKeyScreen
-            masterKeyData={masterKeyData}
-            onNext={handleMasterKeyGenerated}
-            lang={lang}
-            onToggleLang={toggleLang}
-          />
+          <MasterKeyScreen masterKeyData={masterKeyData} onNext={handleMasterKeyGenerated} lang={lang} onToggleLang={toggleLang} />
         )}
 
-        {/* QUIZ */}
         {step === 'quiz' && masterKeyData && (
-          <QuizScreen
-            key="quiz-screen"
-            masterKeyData={masterKeyData}
-            onNext={handleQuizSuccess}
-            lang={lang}
-            onToggleLang={toggleLang}
-          />
+          <QuizScreen key="quiz-screen" masterKeyData={masterKeyData} onNext={handleQuizSuccess} lang={lang} onToggleLang={toggleLang} />
         )}
 
-        {/* PIN SETUP */}
         {step === 'pin' && (
-          <PinScreen
-            onNext={handlePinConfirmed}
-            lang={lang}
-            onToggleLang={toggleLang}
-          />
+          <PinScreen onNext={handlePinConfirmed} lang={lang} onToggleLang={toggleLang} />
         )}
 
-        {/* FINALIZATION (ожидание регистрации) */}
         {step === 'final' && (
           <div className="text-center space-y-4">
-            <h1 className="text-7xl font-bold text-center text-gray-800 font-['Dubtronic'] font-light">
-              Ekso
-            </h1>
-            <h2 className="text-2xl font-bold text-gray-800 mt-6">
-              {status || t.registering}
-            </h2>
-            <p className="text-gray-600">
-              {lang === 'ru' ? 'Подождите, аккаунт создаётся...' : 'Please wait, account is being created...'}
-            </p>
-            <div className="flex justify-center">
-              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            </div>
+            <h1 className="text-7xl font-bold text-center text-gray-800 font-['Dubtronic'] font-light">Ekso</h1>
+            <h2 className="text-2xl font-bold text-gray-800 mt-6">{status || t.registering}</h2>
+            <p className="text-gray-600">{lang === 'ru' ? 'Подождите, аккаунт создаётся...' : 'Please wait, account is being created...'}</p>
+            <div className="flex justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
           </div>
         )}
-
       </div>
     </div>
   );
