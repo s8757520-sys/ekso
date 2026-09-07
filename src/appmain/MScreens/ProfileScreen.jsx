@@ -9,6 +9,14 @@
 import { useState, useEffect } from 'react';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
+// Функция для получения полного URL аватарки
+const getFullAvatarUrl = (avatar) => {
+  if (!avatar) return null;
+  if (avatar.startsWith('http')) return avatar;
+  if (avatar.startsWith('/avatars/')) return `https://ekso.me${avatar}`;
+  return avatar;
+};
+
 const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
   const [copied, setCopied] = useState(false);
   const [displayName, setDisplayName] = useState('');
@@ -36,8 +44,10 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
           localStorage.setItem('ekso_display_name', data.profile.displayName);
         }
         if (data.profile.avatar) {
-          setAvatar(data.profile.avatar);
-          localStorage.setItem('ekso_avatar', data.profile.avatar);
+          // СОХРАНЯЕМ ПОЛНЫЙ URL СРАЗУ
+          const fullUrl = getFullAvatarUrl(data.profile.avatar);
+          setAvatar(fullUrl);
+          localStorage.setItem('ekso_avatar', fullUrl);
         }
       } else {
         const saved = localStorage.getItem('ekso_display_name');
@@ -45,7 +55,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
         else if (nickname) setDisplayName(nickname);
         
         const savedAvatar = localStorage.getItem('ekso_avatar');
-        if (savedAvatar) setAvatar(savedAvatar);
+        if (savedAvatar) setAvatar(getFullAvatarUrl(savedAvatar));
       }
       setProfileLoaded(true);
     }
@@ -59,7 +69,7 @@ const ProfileScreen = ({ nickname, publicKey, lang = 'ru', onBack }) => {
       else if (nickname) setDisplayName(nickname);
       
       const savedAvatar = localStorage.getItem('ekso_avatar');
-      if (savedAvatar) setAvatar(savedAvatar);
+      if (savedAvatar) setAvatar(getFullAvatarUrl(savedAvatar));
     }
   }, [nickname, profileLoaded]);
 
