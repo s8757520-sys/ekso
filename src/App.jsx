@@ -3,7 +3,7 @@
  * Date: 2026-09-07
  * Purpose: Main application component for Ekso onboarding
  * Description: Manages routing between onboarding screens.
- * Updated: Added proper registration flow with server confirmation.
+ * Updated: Added InviteScreen support for /invite?nickname=...
  * Author: Ekso Team
  */
 
@@ -20,6 +20,7 @@ import LoginScreen from './components/LoginScreen';
 import RestoreScreen from './components/RestoreScreen';
 import WalletLoginScreen from './components/WalletLoginScreen';
 import NicknameScreen from './components/NicknameScreen';
+import InviteScreen from './components/InviteScreen';
 import MainApp from './appmain/components/MainApp';
 import { generateMasterKey } from './utils/generateMasterKey';
 import { encryptMasterKey } from './utils/encryption';
@@ -37,11 +38,20 @@ function App() {
   const [entryMode, setEntryMode] = useState(null);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  const [isInvite, setIsInvite] = useState(false);
   const lastMessageRef = useRef(null);
   const isMasterKeyGenerated = useRef(false);
-  const [isRegistrationComplete, setIsRegistrationComplete] = useState(false);
 
   const { isConnected, sendMessage, lastMessage } = useWebSocket('wss://ekso.me/ws');
+
+  // ========== ПРОВЕРКА НА ПРИГЛАШЕНИЕ ==========
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const inviteNick = params.get('nickname') || params.get('invite');
+    if (inviteNick) {
+      setIsInvite(true);
+    }
+  }, []);
 
   const isValidNickname = (value) => {
     return /^[a-zA-Z0-9]+$/.test(value);
@@ -170,13 +180,10 @@ function App() {
       }
     }
 
-    // ========== НОВЫЙ ОБРАБОТЧИК: РЕГИСТРАЦИЯ ==========
     if (type === 'register_nickname_result') {
       if (payload.success) {
         console.log('✅ Registration confirmed by server');
-        setIsRegistrationComplete(true);
         setStatus(texts[lang].registered);
-        // ✅ ТОЛЬКО ТЕПЕРЬ ПЕРЕХОДИМ В MAIN
         setStep('main');
       } else {
         console.error('❌ Registration failed:', payload.error);
@@ -223,7 +230,6 @@ function App() {
     setStep('pin');
   };
 
-  // ========== ИЗМЕНЕНО: НЕ ПЕРЕХОДИМ В MAIN ДО ОТВЕТА ОТ СЕРВЕРА ==========
   const handlePinConfirmed = async (pin) => {
     try {
       await savePin(pin);
@@ -234,7 +240,6 @@ function App() {
         encryptedMasterKey: encryptedData,
       });
 
-      // Отправляем запрос на регистрацию
       sendMessage('register_nickname', {
         nickname: nickname,
         publicKey: masterKeyData.wallet.publicKey,
@@ -242,8 +247,7 @@ function App() {
 
       console.log('📤 Registration request sent to server');
       setStatus(t.registering);
-      setStep('final'); // показываем статус "Регистрация..."
-
+      setStep('final');
     } catch (error) {
       console.error('❌ Finalization error:', error);
       setStep('main');
@@ -274,125 +278,174 @@ function App() {
   };
 
   const handleNavigate = (page) => {
-    console.log('Navigate to:', page);
     if (page === 'logout') {
       handleLogout();
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      {step === 'main' ? (
-        <MainApp
-          nickname={nickname}
-          publicKey={masterKeyData?.wallet?.publicKey}
+  // ========== ДОБАВЛЕНИЕ КОНТАКТА ИЗ ПРИГЛАШЕНИЯ ==========
+  const handleAddContactFromInvite = (profile) => {
+    const newContact = {
+      id: profile.nickname,
+      name: profile.nickname,
+      displayName: profile.profile?.displayName || profile.nickname,
+      avatar: profile.profile?.avatar || null,
+      lastMessage: '',
+      time: '',
+    };
+
+    // Сохраняем в localStorage
+    const saved = localStorage.getItem('contacts');
+    let contacts = saved ? JSON.parse(saved) : [];
+    if (!contacts.some(c => c.id === newContact.id)) {
+      contacts.push(newContact);
+      localStorage.setItem('contacts', JSON.stringify(contacts));
+    }
+
+    // Переходим в MainApp
+    setIsInvite(false);
+    window.history.replaceState({}, document.title, '/');
+    setStep('main');
+  };
+
+  // ========== РЕНДЕРИНГ ==========
+
+  // Если открыта страница приглашения
+  if (isInvite) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-primary)]">
+        <InviteScreen
           lang={lang}
-          onLogout={handleLogout}
-          onNavigate={handleNavigate}
-          isNewSession={step === 'main' && masterKeyData !== null}
+          onAddContact={handleAddContactFromInvite}
+          onClose={() => {
+            setIsInvite(false);
+            window.history.replaceState({}, document.title, '/');
+            // Если есть сессия — идём в MainApp, иначе в EntryScreen
+            if (hasSession) {
+              setStep('main');
+            } else {
+              setStep('nickname');
+            }
+          }}
         />
-      ) : (
-        <div className="flex items-center justify-center p-4 min-h-screen bg-[var(--bg-primary)]">
-          <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-xl p-6 w-full max-w-md">
+      </div>
+    );
+  }
 
-            {/* ===== ENTRY SCREEN ===== */}
-            {!entryMode && step !== 'login' && (
-              <OnboardingLayoutES lang={lang} onToggleLang={toggleLang}>
-                <EntryScreen onSelect={handleEntrySelect} lang={lang} hasSession={hasSession} />
-              </OnboardingLayoutES>
-            )}
+  // Если пользователь в MainApp
+  if (step === 'main') {
+    return (
+      <MainApp
+        nickname={nickname}
+        publicKey={masterKeyData?.wallet?.publicKey}
+        lang={lang}
+        onLogout={handleLogout}
+        onNavigate={handleNavigate}
+      />
+    );
+  }
 
-            {/* ===== PIN / BIOMETRIC LOGIN ===== */}
-            {step === 'login' && (
-              <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
-                <LoginScreen
-                  onLogin={handleLogin}
-                  lang={lang}
-                  isBiometricAvailable={isBiometricAvailable}
-                />
-              </OnboardingLayout>
-            )}
+  // Остальные экраны (онбординг)
+  return (
+    <div className="flex items-center justify-center p-4 min-h-screen bg-[var(--bg-primary)]">
+      <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-xl p-6 w-full max-w-md">
 
-            {/* ===== RESTORE ON NEW DEVICE ===== */}
-            {step === 'restore' && (
-              <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
-                <RestoreScreen onRestore={handleRestore} lang={lang} />
-              </OnboardingLayout>
-            )}
+        {/* ENTRY SCREEN */}
+        {!entryMode && step !== 'login' && (
+          <OnboardingLayoutES lang={lang} onToggleLang={toggleLang}>
+            <EntryScreen onSelect={handleEntrySelect} lang={lang} hasSession={hasSession} />
+          </OnboardingLayoutES>
+        )}
 
-            {/* ===== WALLET LOGIN ===== */}
-            {step === 'walletLogin' && (
-              <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
-                <WalletLoginScreen onLogin={handleWalletLogin} lang={lang} />
-              </OnboardingLayout>
-            )}
+        {/* PIN / BIOMETRIC LOGIN */}
+        {step === 'login' && (
+          <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
+            <LoginScreen
+              onLogin={handleLogin}
+              lang={lang}
+              isBiometricAvailable={isBiometricAvailable}
+            />
+          </OnboardingLayout>
+        )}
 
-            {/* ===== CREATE ACCOUNT — NICKNAME ===== */}
-            {entryMode === 'create' && step === 'nickname' && (
-              <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
-                <NicknameScreen
-                  nickname={nickname}
-                  setNickname={setNickname}
-                  status={status}
-                  isLoading={isLoading}
-                  isConnected={isConnected}
-                  checkNickname={checkNickname}
-                  lang={lang}
-                />
-              </OnboardingLayout>
-            )}
+        {/* RESTORE ON NEW DEVICE */}
+        {step === 'restore' && (
+          <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
+            <RestoreScreen onRestore={handleRestore} lang={lang} />
+          </OnboardingLayout>
+        )}
 
-            {/* ===== MASTER KEY ===== */}
-            {step === 'masterKey' && masterKeyData && (
-              <MasterKeyScreen
-                masterKeyData={masterKeyData}
-                onNext={handleMasterKeyGenerated}
-                lang={lang}
-                onToggleLang={toggleLang}
-              />
-            )}
+        {/* WALLET LOGIN */}
+        {step === 'walletLogin' && (
+          <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
+            <WalletLoginScreen onLogin={handleWalletLogin} lang={lang} />
+          </OnboardingLayout>
+        )}
 
-            {/* ===== QUIZ ===== */}
-            {step === 'quiz' && masterKeyData && (
-              <QuizScreen
-                key="quiz-screen"
-                masterKeyData={masterKeyData}
-                onNext={handleQuizSuccess}
-                lang={lang}
-                onToggleLang={toggleLang}
-              />
-            )}
+        {/* CREATE ACCOUNT — NICKNAME */}
+        {entryMode === 'create' && step === 'nickname' && (
+          <OnboardingLayout lang={lang} onToggleLang={toggleLang} onBack={handleBack}>
+            <NicknameScreen
+              nickname={nickname}
+              setNickname={setNickname}
+              status={status}
+              isLoading={isLoading}
+              isConnected={isConnected}
+              checkNickname={checkNickname}
+              lang={lang}
+            />
+          </OnboardingLayout>
+        )}
 
-            {/* ===== PIN SETUP ===== */}
-            {step === 'pin' && (
-              <PinScreen
-                onNext={handlePinConfirmed}
-                lang={lang}
-                onToggleLang={toggleLang}
-              />
-            )}
+        {/* MASTER KEY */}
+        {step === 'masterKey' && masterKeyData && (
+          <MasterKeyScreen
+            masterKeyData={masterKeyData}
+            onNext={handleMasterKeyGenerated}
+            lang={lang}
+            onToggleLang={toggleLang}
+          />
+        )}
 
-            {/* ===== FINALIZATION (ожидание регистрации) ===== */}
-            {step === 'final' && (
-              <div className="text-center space-y-4">
-                <h1 className="text-7xl font-bold text-center text-gray-800 font-['Dubtronic'] font-light">
-                  Ekso
-                </h1>
-                <h2 className="text-2xl font-bold text-gray-800 mt-6">
-                  {status || t.registering}
-                </h2>
-                <p className="text-gray-600">
-                  {lang === 'ru' ? 'Подождите, аккаунт создаётся...' : 'Please wait, account is being created...'}
-                </p>
-                <div className="flex justify-center">
-                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              </div>
-            )}
+        {/* QUIZ */}
+        {step === 'quiz' && masterKeyData && (
+          <QuizScreen
+            key="quiz-screen"
+            masterKeyData={masterKeyData}
+            onNext={handleQuizSuccess}
+            lang={lang}
+            onToggleLang={toggleLang}
+          />
+        )}
 
+        {/* PIN SETUP */}
+        {step === 'pin' && (
+          <PinScreen
+            onNext={handlePinConfirmed}
+            lang={lang}
+            onToggleLang={toggleLang}
+          />
+        )}
+
+        {/* FINALIZATION (ожидание регистрации) */}
+        {step === 'final' && (
+          <div className="text-center space-y-4">
+            <h1 className="text-7xl font-bold text-center text-gray-800 font-['Dubtronic'] font-light">
+              Ekso
+            </h1>
+            <h2 className="text-2xl font-bold text-gray-800 mt-6">
+              {status || t.registering}
+            </h2>
+            <p className="text-gray-600">
+              {lang === 'ru' ? 'Подождите, аккаунт создаётся...' : 'Please wait, account is being created...'}
+            </p>
+            <div className="flex justify-center">
+              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+      </div>
     </div>
   );
 }
