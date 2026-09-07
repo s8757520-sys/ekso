@@ -1,7 +1,7 @@
 /**
  * File: ChatScreen.jsx
- * Date: 2026-09-04
- * Purpose: Chat interface with WebSocket integration — Telegram style
+ * Date: 2026-09-07
+ * Purpose: Chat interface with WebSocket integration — отправка на сервер
  * Description: Displays messages, sends/receives via WebSocket
  * Author: Ekso Team
  */
@@ -9,10 +9,10 @@
 import { useState, useEffect } from 'react';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 
-const ChatScreen = ({ lang = 'ru', nickname = 'Гость' }) => {
+const ChatScreen = ({ lang = 'ru', nickname = 'Гость', recipient = 'alex' }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const { isConnected, sendMessage, lastMessage } = useWebSocket('wss://ekso.me');
+  const { isConnected, sendMessage, lastMessage } = useWebSocket();
 
   const texts = {
     ru: {
@@ -33,15 +33,17 @@ const ChatScreen = ({ lang = 'ru', nickname = 'Гость' }) => {
 
   const t = texts[lang] || texts.ru;
 
+  // Обработка входящих сообщений с сервера
   useEffect(() => {
     if (lastMessage && lastMessage.type === 'chat_message') {
+      const payload = lastMessage.payload;
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now(),
-          text: lastMessage.payload.text,
+          text: payload.text || 'Сообщение',
           sender: 'them',
-          time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+          time: new Date(payload.timestamp || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
     }
@@ -53,6 +55,7 @@ const ChatScreen = ({ lang = 'ru', nickname = 'Гость' }) => {
     const now = new Date();
     const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
 
+    // Добавляем сообщение в локальный список
     setMessages((prev) => [
       ...prev,
       {
@@ -63,7 +66,15 @@ const ChatScreen = ({ lang = 'ru', nickname = 'Гость' }) => {
       },
     ]);
 
-    sendMessage('chat_message', { text: input, from: nickname });
+    // Отправляем на сервер
+    sendMessage('chat_message', {
+      from: nickname,
+      to: recipient,
+      text: input,
+      chatId: `chat_${[nickname, recipient].sort().join('_')}`,
+      timestamp: now.getTime(),
+    });
+
     setInput('');
   };
 
@@ -71,10 +82,10 @@ const ChatScreen = ({ lang = 'ru', nickname = 'Гость' }) => {
     <div className="flex flex-col h-[400px] sm:h-[500px] md:h-[550px] bg-[var(--bg-primary)] rounded-xl overflow-hidden shadow-sm">
       <div className="bg-[var(--bg-secondary)] px-3 sm:px-4 py-3 border-b border-[var(--border-color)] flex items-center gap-3 flex-shrink-0">
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
-          {nickname.charAt(0).toUpperCase()}
+          {recipient.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-[var(--text-primary)] text-sm sm:text-base">{nickname}</div>
+          <div className="font-semibold text-[var(--text-primary)] text-sm sm:text-base">{recipient}</div>
           <div className={`text-[10px] sm:text-xs ${isConnected ? 'text-green-500' : 'text-gray-400'}`}>
             ● {isConnected ? t.online : t.offline}
           </div>
