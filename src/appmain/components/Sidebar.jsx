@@ -1,19 +1,37 @@
 /**
  * File: Sidebar.jsx
- * Date: 2026-09-06
+ * Date: 2026-09-07
  * Purpose: Sidebar navigation menu component
  * Description: Slides in from the left side of the screen. Contains user profile info,
  * navigation items (Profile, Chats, Channels, Contacts, Notifications, Wallet,
  * Keepers Network, Settings, Help & FAQ), and a logout button.
  * Author: Ekso Team
+ * Updated: Добавлены displayName и avatar для текущего пользователя
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 
 const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru', onLanguageChange, activeScreen }) => {
   const { theme, toggleTheme } = useTheme();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [displayName, setDisplayName] = useState(nickname);
+  const [avatar, setAvatar] = useState(null);
+
+  // Загружаем displayName и avatar из localStorage
+  useEffect(() => {
+    const savedName = localStorage.getItem('ekso_display_name');
+    if (savedName) {
+      setDisplayName(savedName);
+    } else if (nickname) {
+      setDisplayName(nickname);
+    }
+
+    const savedAvatar = localStorage.getItem('ekso_avatar');
+    if (savedAvatar) {
+      setAvatar(savedAvatar);
+    }
+  }, [nickname]);
 
   const texts = {
     ru: {
@@ -85,6 +103,10 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
     }
   };
 
+  // Определяем имя для отображения
+  const displayNameToShow = displayName || nickname || 'Гость';
+  const firstLetter = displayNameToShow.charAt(0).toUpperCase();
+
   return (
     <>
       {isOpen && (
@@ -103,14 +125,18 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
         <div className="p-4 border-b border-[var(--border-color)] relative flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative flex-shrink-0">
-              <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
-                {nickname ? nickname.charAt(0).toUpperCase() : '?'}
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
+                {avatar ? (
+                  <img src={avatar} alt={displayNameToShow} className="w-full h-full object-cover" />
+                ) : (
+                  <span>{firstLetter}</span>
+                )}
               </div>
               <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[var(--bg-secondary)] rounded-full"></span>
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-[var(--text-primary)] text-sm truncate">
-                {nickname || 'Гость'}
+                {displayNameToShow}
               </div>
               <div className="text-xs text-green-500">
                 {lang === 'ru' ? 'онлайн' : 'online'}
