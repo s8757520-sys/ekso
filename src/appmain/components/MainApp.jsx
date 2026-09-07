@@ -88,7 +88,6 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
           localStorage.setItem('ekso_display_name', data.profile.displayName);
         }
         if (data.profile.avatar) {
-          // Сохраняем полный URL
           const fullUrl = getFullAvatarUrl(data.profile.avatar);
           localStorage.setItem('ekso_avatar', fullUrl);
         }
@@ -227,7 +226,6 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
-                  {/* Имя: displayName, если есть, иначе name, иначе id */}
                   <span className="font-medium text-[var(--text-primary)] text-sm">
                     {chat.displayName || chat.name || chat.id}
                   </span>
