@@ -4,12 +4,13 @@
  * Purpose: Invite page — add contact by link
  * Description: Shows user profile and "Add contact" button
  * Author: Ekso Team
+ * Updated: sends add_contact to server with delay before closing
  */
 
 import { useState, useEffect } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
 
-const InviteScreen = ({ lang = 'ru', onAddContact, onClose }) => {
+const InviteScreen = ({ lang = 'ru', nickname: currentUser, onAddContact, onClose }) => {
   const [nickname, setNickname] = useState('');
   const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -17,10 +18,9 @@ const InviteScreen = ({ lang = 'ru', onAddContact, onClose }) => {
 
   const { isConnected, sendMessage, lastMessage } = useWebSocket();
 
-  // Получаем никнейм из URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const nick = params.get('nickname');
+    const nick = params.get('nickname') || params.get('invite');
     if (nick) {
       setNickname(nick);
     } else {
@@ -29,14 +29,12 @@ const InviteScreen = ({ lang = 'ru', onAddContact, onClose }) => {
     }
   }, []);
 
-  // Проверяем пользователя на сервере
   useEffect(() => {
     if (isConnected && nickname) {
       sendMessage('check_nickname', { nickname });
     }
   }, [isConnected, nickname]);
 
-  // Обрабатываем ответы от сервера
   useEffect(() => {
     if (!lastMessage) return;
 
@@ -46,7 +44,6 @@ const InviteScreen = ({ lang = 'ru', onAddContact, onClose }) => {
         setError('Пользователь не найден');
       } else {
         setStatus('found');
-        // Запрашиваем профиль
         sendMessage('get_profile', { nickname });
       }
     }
@@ -64,12 +61,38 @@ const InviteScreen = ({ lang = 'ru', onAddContact, onClose }) => {
   }, [lastMessage]);
 
   const handleAddContact = () => {
-    if (profile) {
-      onAddContact(profile);
+    if (!profile) return;
+
+    const newContact = {
+      id: profile.nickname,
+      name: profile.nickname,
+      displayName: profile.profile?.displayName || profile.nickname,
+      avatar: profile.profile?.avatar || null,
+      lastMessage: '',
+      time: '',
+    };
+
+    const saved = localStorage.getItem('contacts');
+    let contacts = saved ? JSON.parse(saved) : [];
+    if (!contacts.some(c => c.id === newContact.id)) {
+      contacts.push(newContact);
+      localStorage.setItem('contacts', JSON.stringify(contacts));
     }
+
+    if (isConnected && currentUser) {
+      sendMessage('add_contact', {
+        user: currentUser,
+        contact: profile.nickname
+      });
+      console.log(`📤 add_contact: ${currentUser} → ${profile.nickname}`);
+    }
+
+    // Задержка перед закрытием, чтобы запрос успел уйти
+    setTimeout(() => {
+      onAddContact(profile);
+    }, 500);
   };
 
-  // Тексты
   const t = {
     ru: {
       title: 'Приглашение в Ekso',
