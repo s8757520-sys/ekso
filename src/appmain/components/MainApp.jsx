@@ -5,8 +5,8 @@
  * Description: Displays dashboard with chats, channels, wallet, settings
  * Author: Ekso Team
  * Updated: 
- *   - Загрузка профиля с сервера при входе
- *   - Автоматическое добавление https://ekso.me к путям аватарок
+ *   - Информационная заглушка вместо пустого списка чатов
+ *   - Кнопки: Добавить контакт, Ссылка на профиль, Гостевой чат
  */
 
 import { useState, useEffect } from 'react';
@@ -15,19 +15,9 @@ import Header from './Header';
 import Footer from './Footer';
 import Sidebar from './Sidebar';
 import ProfileScreen from '../MScreens/ProfileScreen';
+import ContactsScreen from '../MScreens/ContactsScreen';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
-// Дефолтные чаты (если в localStorage пусто)
-const defaultChats = [
-  { id: 1, name: 'Алексей', lastMessage: 'Привет! Как дела?', time: '14:30', avatar: null },
-  { id: 2, name: 'Мария', lastMessage: 'Договорились!', time: '12:15', avatar: null },
-  { id: 3, name: 'Гость #4421', lastMessage: 'Спасибо!', time: '10:02', avatar: null },
-  { id: 4, name: 'Bithom', lastMessage: 'Юра сосед, ККЗ', time: '09:45', avatar: null },
-  { id: 5, name: 'ФРОЛОВ', lastMessage: 'EcoFactor Support...', time: '08:30', avatar: null },
-  { id: 6, name: 'Вика', lastMessage: 'Сили обороны отримали наказ...', time: '07:15', avatar: null },
-];
-
-// Функция для получения полного URL аватарки
 const getFullAvatarUrl = (avatar) => {
   if (!avatar) return null;
   if (avatar.startsWith('http')) return avatar;
@@ -48,7 +38,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
 
   const { isConnected, sendMessage, lastMessage } = useWebSocket();
 
-  // Загружаем чаты из localStorage при монтировании
+  // Загружаем чаты из localStorage
   useEffect(() => {
     const saved = localStorage.getItem('contacts');
     if (saved) {
@@ -62,7 +52,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
         console.error('Ошибка парсинга contacts из localStorage:', e);
       }
     }
-    setChats(defaultChats);
+    setChats([]);
   }, []);
 
   // Сохраняем чаты в localStorage при их изменении
@@ -79,7 +69,6 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
     }
   }, [isConnected, nickname]);
 
-  // Сохраняем полученный профиль в localStorage
   useEffect(() => {
     if (lastMessage && lastMessage.type === 'get_profile_result') {
       const data = lastMessage.payload;
@@ -115,6 +104,10 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
       setCurrentScreen('chats');
       return;
     }
+    if (page === 'contacts') {
+      setCurrentScreen('contacts');
+      return;
+    }
     if (page === 'logout') {
       onNavigate('logout');
       return;
@@ -123,6 +116,20 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
     setCurrentScreen(page);
   };
 
+  const handleShareProfile = () => {
+    const link = `https://ekso.me/connect_with/@${nickname}`;
+    navigator.clipboard.writeText(link);
+    alert(lang === 'ru' ? 'Ссылка на профиль скопирована!' : 'Profile link copied!');
+  };
+
+  const handleGuestChat = () => {
+    alert(lang === 'ru' 
+      ? 'Гостевой чат будет доступен в ближайшее время' 
+      : 'Guest chat will be available soon'
+    );
+  };
+
+  // ========== ЛИЧНЫЙ ЧАТ ==========
   if (selectedChat) {
     return (
       <div className="min-h-screen bg-[var(--bg-primary)]">
@@ -145,7 +152,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
     );
   }
 
-  // Если открыт профиль
+  // ========== ПРОФИЛЬ ==========
   if (currentScreen === 'profile') {
     return (
       <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
@@ -173,6 +180,41 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
     );
   }
 
+  // ========== КОНТАКТЫ ==========
+  if (currentScreen === 'contacts') {
+    return (
+      <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={toggleSidebar}
+          onNavigate={handleNavigate}
+          nickname={nickname}
+          publicKey={publicKey}
+          lang={lang}
+          onLanguageChange={setLang}
+          activeScreen="contacts"
+        />
+        <Header onMenuClick={toggleSidebar} />
+        <div className="flex-1 overflow-y-auto">
+          <ContactsScreen
+            nickname={nickname}
+            lang={lang}
+            onBack={() => setCurrentScreen('chats')}
+            onOpenChat={(contact) => {
+              setSelectedChat(contact.id || contact.name);
+              setSelectedChatName(contact.name || contact.id);
+              setSelectedChatDisplayName(contact.displayName || contact.name || contact.id);
+              setSelectedChatAvatar(contact.avatar || null);
+              setCurrentScreen('chat');
+            }}
+          />
+        </div>
+        <Footer activeTab={activeTab} onTabChange={setActiveTab} lang={lang} />
+      </div>
+    );
+  }
+
+  // ========== ГЛАВНАЯ СТРАНИЦА (СПИСОК ЧАТОВ) ==========
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
       <Sidebar
@@ -202,8 +244,45 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
         </div>
 
         {chats.length === 0 ? (
-          <div className="text-center text-[var(--text-secondary)] py-8">
-            Нет чатов. Начните диалог с новым контактом.
+          <div className="text-center py-12 px-4">
+            <div className="text-6xl mb-4">💬</div>
+            <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
+              {lang === 'ru' ? 'У вас пока нет чатов' : 'No chats yet'}
+            </h3>
+            <p className="text-[var(--text-secondary)] text-sm mb-6">
+              {lang === 'ru' 
+                ? 'Начните общение с друзьями в Ekso' 
+                : 'Start chatting with friends on Ekso'}
+            </p>
+            
+            <div className="space-y-3 max-w-sm mx-auto">
+              <button 
+                onClick={() => handleNavigate('contacts')}
+                className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition text-sm font-medium"
+              >
+                {lang === 'ru' ? '➕ Добавить контакт' : '➕ Add contact'}
+              </button>
+              
+              <button 
+                onClick={handleShareProfile}
+                className="w-full py-3 px-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] rounded-xl transition text-sm font-medium"
+              >
+                {lang === 'ru' ? '🔗 Отправить ссылку на профиль' : '🔗 Share profile link'}
+              </button>
+              
+              <button 
+                onClick={handleGuestChat}
+                className="w-full py-3 px-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] rounded-xl transition text-sm font-medium"
+              >
+                {lang === 'ru' ? '👤 Начать гостевой чат' : '👤 Start guest chat'}
+              </button>
+            </div>
+            
+            <p className="text-xs text-[var(--text-secondary)] mt-6">
+              {lang === 'ru' 
+                ? 'Гостевой чат — общение без регистрации, сессия живёт 24 часа' 
+                : 'Guest chat — chat without registration, session lasts 24 hours'}
+            </p>
           </div>
         ) : (
           chats.map((chat) => (
@@ -212,7 +291,6 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
               onClick={() => openChat(chat)}
               className="flex items-center gap-3 py-3 border-b border-[var(--border-color)] cursor-pointer hover:bg-[var(--bg-secondary)] transition px-2"
             >
-              {/* Аватарка с полным URL */}
               <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
                 {chat.avatar ? (
                   <img 
