@@ -4,7 +4,7 @@
  * Purpose: Main application interface after login
  * Description: Displays dashboard with chats, channels, wallet, settings
  * Author: Ekso Team
- * Updated: Список чатов теперь читается из localStorage (динамический)
+ * Updated: Список чатов читается из localStorage, отображаются displayName и avatar
  */
 
 import { useState, useEffect } from 'react';
@@ -16,18 +16,20 @@ import ProfileScreen from '../MScreens/ProfileScreen';
 
 // Дефолтные чаты (если в localStorage пусто)
 const defaultChats = [
-  { id: 1, name: 'Алексей', lastMessage: 'Привет! Как дела?', time: '14:30', avatar: 'А' },
-  { id: 2, name: 'Мария', lastMessage: 'Договорились!', time: '12:15', avatar: 'М' },
-  { id: 3, name: 'Гость #4421', lastMessage: 'Спасибо!', time: '10:02', avatar: 'Г' },
-  { id: 4, name: 'Bithom', lastMessage: 'Юра сосед, ККЗ', time: '09:45', avatar: 'Б' },
-  { id: 5, name: 'ФРОЛОВ', lastMessage: 'EcoFactor Support...', time: '08:30', avatar: 'Ф' },
-  { id: 6, name: 'Вика', lastMessage: 'Сили обороны отримали наказ...', time: '07:15', avatar: 'В' },
+  { id: 1, name: 'Алексей', lastMessage: 'Привет! Как дела?', time: '14:30', avatar: null },
+  { id: 2, name: 'Мария', lastMessage: 'Договорились!', time: '12:15', avatar: null },
+  { id: 3, name: 'Гость #4421', lastMessage: 'Спасибо!', time: '10:02', avatar: null },
+  { id: 4, name: 'Bithom', lastMessage: 'Юра сосед, ККЗ', time: '09:45', avatar: null },
+  { id: 5, name: 'ФРОЛОВ', lastMessage: 'EcoFactor Support...', time: '08:30', avatar: null },
+  { id: 6, name: 'Вика', lastMessage: 'Сили обороны отримали наказ...', time: '07:15', avatar: null },
 ];
 
 const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
   const [activeTab, setActiveTab] = useState('chats');
   const [selectedChat, setSelectedChat] = useState(null);
   const [selectedChatName, setSelectedChatName] = useState('');
+  const [selectedChatAvatar, setSelectedChatAvatar] = useState(null);
+  const [selectedChatDisplayName, setSelectedChatDisplayName] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lang, setLang] = useState(initialLang);
   const [currentScreen, setCurrentScreen] = useState('chats');
@@ -47,7 +49,6 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
         console.error('Ошибка парсинга contacts из localStorage:', e);
       }
     }
-    // Если в localStorage пусто — используем дефолтные
     setChats(defaultChats);
   }, []);
 
@@ -60,7 +61,9 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
 
   const openChat = (chat) => {
     setSelectedChat(chat.id);
-    setSelectedChatName(chat.name);
+    setSelectedChatName(chat.name || chat.id);
+    setSelectedChatDisplayName(chat.displayName || chat.name || chat.id);
+    setSelectedChatAvatar(chat.avatar || null);
   };
 
   const toggleSidebar = () => {
@@ -94,7 +97,13 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
           ← Назад к чатам
         </button>
         <div className="w-full px-2 sm:px-4">
-          <ChatScreen lang={lang} nickname={selectedChatName} />
+          <ChatScreen 
+            lang={lang} 
+            nickname={nickname} 
+            recipient={selectedChatName}
+            recipientDisplayName={selectedChatDisplayName}
+            recipientAvatar={selectedChatAvatar}
+          />
         </div>
       </div>
     );
@@ -167,12 +176,20 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
               onClick={() => openChat(chat)}
               className="flex items-center gap-3 py-3 border-b border-[var(--border-color)] cursor-pointer hover:bg-[var(--bg-secondary)] transition px-2"
             >
-              <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                {chat.avatar || chat.name.charAt(0).toUpperCase()}
+              {/* Аватарка */}
+              <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
+                {chat.avatar ? (
+                  <img src={chat.avatar} alt={chat.displayName || chat.name || chat.id} className="w-full h-full object-cover" />
+                ) : (
+                  <span>{(chat.displayName || chat.name || chat.id).charAt(0).toUpperCase()}</span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-[var(--text-primary)] text-sm">{chat.name}</span>
+                  {/* Имя: displayName, если есть, иначе name, иначе id */}
+                  <span className="font-medium text-[var(--text-primary)] text-sm">
+                    {chat.displayName || chat.name || chat.id}
+                  </span>
                   <span className="text-xs text-[var(--text-secondary)]">{chat.time || '—'}</span>
                 </div>
                 <p className="text-sm text-[var(--text-secondary)] truncate">{chat.lastMessage || 'Нет сообщений'}</p>
