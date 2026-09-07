@@ -1,13 +1,9 @@
 /**
  * File: App.jsx
- * Date: 2026-09-06
+ * Date: 2026-09-07
  * Purpose: Main application component for Ekso onboarding
- * Description: Manages routing between onboarding screens:
- *          EntryScreen, LoginScreen, RestoreScreen, WalletLoginScreen,
- *          account creation, master key, Quiz, PIN, finalization.
- *          Also handles language state, WebSocket, master key.
- *          IMPORTANT: MainApp is rendered OUTSIDE the onboarding card
- *          to ensure it appears as a separate full-page interface.
+ * Description: Manages routing between onboarding screens.
+ * Updated: Added proper registration flow with server confirmation.
  * Author: Ekso Team
  */
 
@@ -43,6 +39,7 @@ function App() {
   const [hasSession, setHasSession] = useState(false);
   const lastMessageRef = useRef(null);
   const isMasterKeyGenerated = useRef(false);
+  const [isRegistrationComplete, setIsRegistrationComplete] = useState(false);
 
   const { isConnected, sendMessage, lastMessage } = useWebSocket('wss://ekso.me/ws');
 
@@ -67,6 +64,8 @@ function App() {
       invalidChars: 'Только латиница и цифры',
       noConnection: 'Нет соединения с сервером. Проверьте интернет.',
       footer: 'Суверенное право человека оставаться хозяином своих мыслей, слов и капитала — это и есть приватность',
+      registering: 'Регистрация на сервере...',
+      registered: 'Аккаунт создан!',
     },
     en: {
       title: 'Welcome to your digital sovereignty',
@@ -84,6 +83,8 @@ function App() {
       invalidChars: 'Only Latin letters and numbers',
       noConnection: 'No connection to the server. Check your internet.',
       footer: 'The sovereign right of a person to remain the master of their thoughts, words, and capital — that is privacy',
+      registering: 'Registering on server...',
+      registered: 'Account created!',
     }
   };
 
@@ -150,6 +151,7 @@ function App() {
     }
   };
 
+  // ========== ОБРАБОТКА ВСЕХ СООБЩЕНИЙ ОТ СЕРВЕРА ==========
   useEffect(() => {
     if (!lastMessage) return;
     if (lastMessageRef.current === lastMessage) return;
@@ -165,6 +167,21 @@ function App() {
         setStep('masterKey');
       } else {
         setStatus(texts[lang].taken);
+      }
+    }
+
+    // ========== НОВЫЙ ОБРАБОТЧИК: РЕГИСТРАЦИЯ ==========
+    if (type === 'register_nickname_result') {
+      if (payload.success) {
+        console.log('✅ Registration confirmed by server');
+        setIsRegistrationComplete(true);
+        setStatus(texts[lang].registered);
+        // ✅ ТОЛЬКО ТЕПЕРЬ ПЕРЕХОДИМ В MAIN
+        setStep('main');
+      } else {
+        console.error('❌ Registration failed:', payload.error);
+        setStatus(`❌ ${payload.error || texts[lang].serverError}`);
+        setStep('nickname');
       }
     }
 
@@ -206,6 +223,7 @@ function App() {
     setStep('pin');
   };
 
+  // ========== ИЗМЕНЕНО: НЕ ПЕРЕХОДИМ В MAIN ДО ОТВЕТА ОТ СЕРВЕРА ==========
   const handlePinConfirmed = async (pin) => {
     try {
       await savePin(pin);
@@ -216,13 +234,16 @@ function App() {
         encryptedMasterKey: encryptedData,
       });
 
+      // Отправляем запрос на регистрацию
       sendMessage('register_nickname', {
         nickname: nickname,
         publicKey: masterKeyData.wallet.publicKey,
       });
 
-      console.log('✅ Data saved to IndexedDB and sent to server');
-      setStep('main');
+      console.log('📤 Registration request sent to server');
+      setStatus(t.registering);
+      setStep('final'); // показываем статус "Регистрация..."
+
     } catch (error) {
       console.error('❌ Finalization error:', error);
       setStep('main');
@@ -245,7 +266,6 @@ function App() {
   };
 
   const handleLogout = () => {
-    // Удаляем только сессионные данные, оставляем тему и язык
     localStorage.removeItem('ekso-lang');
     localStorage.removeItem('ekso-session');
     sessionStorage.clear();
@@ -352,15 +372,21 @@ function App() {
               />
             )}
 
-            {/* ===== FINALIZATION ===== */}
+            {/* ===== FINALIZATION (ожидание регистрации) ===== */}
             {step === 'final' && (
               <div className="text-center space-y-4">
                 <h1 className="text-7xl font-bold text-center text-gray-800 font-['Dubtronic'] font-light">
                   Ekso
                 </h1>
-                <h2 className="text-2xl font-bold text-gray-800 mt-6">🎉 Registration complete!</h2>
-                <p className="text-gray-600">Your account has been created and secured.</p>
-                <p className="text-sm text-gray-500">Chat and wallet interface coming soon.</p>
+                <h2 className="text-2xl font-bold text-gray-800 mt-6">
+                  {status || t.registering}
+                </h2>
+                <p className="text-gray-600">
+                  {lang === 'ru' ? 'Подождите, аккаунт создаётся...' : 'Please wait, account is being created...'}
+                </p>
+                <div className="flex justify-center">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
               </div>
             )}
 
