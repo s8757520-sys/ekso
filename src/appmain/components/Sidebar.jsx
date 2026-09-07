@@ -6,11 +6,21 @@
  * navigation items (Profile, Chats, Channels, Contacts, Notifications, Wallet,
  * Keepers Network, Settings, Help & FAQ), and a logout button.
  * Author: Ekso Team
- * Updated: Добавлены displayName и avatar для текущего пользователя
+ * Updated: 
+ *   - Добавлены displayName и avatar для текущего пользователя
+ *   - Автоматическое добавление https://ekso.me к путям аватарок
  */
 
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+
+// Функция для получения полного URL аватарки
+const getFullAvatarUrl = (avatar) => {
+  if (!avatar) return null;
+  if (avatar.startsWith('http')) return avatar;
+  if (avatar.startsWith('/avatars/')) return `https://ekso.me${avatar}`;
+  return avatar;
+};
 
 const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru', onLanguageChange, activeScreen }) => {
   const { theme, toggleTheme } = useTheme();
@@ -29,7 +39,7 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
 
     const savedAvatar = localStorage.getItem('ekso_avatar');
     if (savedAvatar) {
-      setAvatar(savedAvatar);
+      setAvatar(getFullAvatarUrl(savedAvatar));
     }
   }, [nickname]);
 
