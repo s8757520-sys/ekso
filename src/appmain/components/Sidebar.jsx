@@ -9,13 +9,12 @@
  * Updated: 
  *   - Добавлены displayName и avatar для текущего пользователя
  *   - Автоматическое добавление https://ekso.me к путям аватарок
- *   - Мгновенное обновление при изменении данных в localStorage
+ *   - Подписка на событие profileUpdated для мгновенного обновления
  */
 
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 
-// Функция для получения полного URL аватарки
 const getFullAvatarUrl = (avatar) => {
   if (!avatar) return null;
   if (avatar.startsWith('http')) return avatar;
@@ -26,16 +25,15 @@ const getFullAvatarUrl = (avatar) => {
 const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru', onLanguageChange, activeScreen }) => {
   const { theme, toggleTheme } = useTheme();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [displayName, setDisplayName] = useState(nickname);
+  const [displayName, setDisplayName] = useState(nickname || 'Гость');
   const [avatar, setAvatar] = useState(null);
 
-  // ========== ФУНКЦИЯ ОБНОВЛЕНИЯ ДАННЫХ ==========
   const updateProfileData = () => {
     const savedName = localStorage.getItem('ekso_display_name');
     if (savedName) {
       setDisplayName(savedName);
-    } else if (nickname) {
-      setDisplayName(nickname);
+    } else {
+      setDisplayName(nickname || 'Гость');
     }
 
     const savedAvatar = localStorage.getItem('ekso_avatar');
@@ -46,20 +44,17 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
     }
   };
 
-  // Загружаем displayName и avatar из localStorage при открытии меню
   useEffect(() => {
     updateProfileData();
   }, [nickname, isOpen]);
 
-  // ========== СЛУШАЕМ ИЗМЕНЕНИЯ В localStorage ==========
+  // ========== СЛУШАЕМ СОБЫТИЕ ОБНОВЛЕНИЯ ПРОФИЛЯ ==========
   useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'ekso_display_name' || e.key === 'ekso_avatar') {
-        updateProfileData();
-      }
+    const handleProfileUpdate = () => {
+      updateProfileData();
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
   }, []);
 
   const texts = {
@@ -132,7 +127,6 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
     }
   };
 
-  // Определяем имя для отображения
   const displayNameToShow = displayName || nickname || 'Гость';
   const firstLetter = displayNameToShow.charAt(0).toUpperCase();
 
@@ -150,7 +144,6 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Верхняя часть: профиль */}
         <div className="p-4 border-b border-[var(--border-color)] relative flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative flex-shrink-0">
@@ -180,7 +173,6 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
           </button>
         </div>
 
-        {/* Список меню */}
         <div className="flex-1 overflow-y-auto py-2">
           {menuItems.map((item) => {
             const isActive = activeScreen === item.id;
@@ -204,7 +196,6 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
           })}
         </div>
 
-        {/* Плашки переключения языка и темы */}
         <div className="px-4 py-3 border-t border-[var(--border-color)] flex-shrink-0">
           <div className="flex items-center justify-center gap-4">
             <button
@@ -225,7 +216,6 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
           </div>
         </div>
 
-        {/* Кнопка выхода */}
         <div className="px-4 py-3 border-t border-[var(--border-color)] flex-shrink-0">
           <button
             onClick={handleLogoutClick}
@@ -237,7 +227,6 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
         </div>
       </div>
 
-      {/* Модалка подтверждения выхода */}
       {showLogoutModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[var(--bg-primary)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl">
