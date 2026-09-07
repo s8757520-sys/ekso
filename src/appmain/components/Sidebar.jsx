@@ -9,6 +9,7 @@
  * Updated: 
  *   - Добавлены displayName и avatar для текущего пользователя
  *   - Автоматическое добавление https://ekso.me к путям аватарок
+ *   - Мгновенное обновление при изменении данных в localStorage
  */
 
 import { useState, useEffect } from 'react';
@@ -28,8 +29,8 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
   const [displayName, setDisplayName] = useState(nickname);
   const [avatar, setAvatar] = useState(null);
 
-  // Загружаем displayName и avatar из localStorage
-  useEffect(() => {
+  // ========== ФУНКЦИЯ ОБНОВЛЕНИЯ ДАННЫХ ==========
+  const updateProfileData = () => {
     const savedName = localStorage.getItem('ekso_display_name');
     if (savedName) {
       setDisplayName(savedName);
@@ -40,8 +41,26 @@ const Sidebar = ({ isOpen, onClose, onNavigate, nickname, publicKey, lang = 'ru'
     const savedAvatar = localStorage.getItem('ekso_avatar');
     if (savedAvatar) {
       setAvatar(getFullAvatarUrl(savedAvatar));
+    } else {
+      setAvatar(null);
     }
-  }, [nickname]);
+  };
+
+  // Загружаем displayName и avatar из localStorage при открытии меню
+  useEffect(() => {
+    updateProfileData();
+  }, [nickname, isOpen]);
+
+  // ========== СЛУШАЕМ ИЗМЕНЕНИЯ В localStorage ==========
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'ekso_display_name' || e.key === 'ekso_avatar') {
+        updateProfileData();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const texts = {
     ru: {
