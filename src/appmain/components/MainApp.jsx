@@ -1,12 +1,13 @@
 /**
  * File: MainApp.jsx
- * Date: 2026-09-07
+ * Date: 2026-09-08
  * Purpose: Main application interface after login
  * Description: Displays dashboard with chats, channels, wallet, settings
  * Author: Ekso Team
  * Updated: 
  *   - Информационная заглушка вместо пустого списка чатов
  *   - Кнопки: Добавить контакт, Ссылка на профиль, Гостевой чат
+ *   - Добавлена обработка входящих chat_message
  */
 
 import { useState, useEffect } from 'react';
@@ -83,6 +84,40 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
       }
     }
   }, [lastMessage]);
+
+  // ========== ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ==========
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'chat_message') {
+      const payload = lastMessage.payload;
+      console.log('📩 Новое сообщение от', payload.from, ':', payload.text);
+
+      // Обновляем список чатов (если нужно)
+      setChats(prevChats => {
+        const chatId = payload.chatId || `chat_${[nickname, payload.from].sort().join('_')}`;
+        const existingChat = prevChats.find(c => c.id === chatId || c.name === payload.from);
+        
+        if (existingChat) {
+          // Обновляем последнее сообщение
+          return prevChats.map(c => 
+            (c.id === chatId || c.name === payload.from) 
+              ? { ...c, lastMessage: payload.text, time: new Date(payload.timestamp).toLocaleTimeString() }
+              : c
+          );
+        } else {
+          // Добавляем новый чат
+          const newChat = {
+            id: chatId,
+            name: payload.from,
+            displayName: payload.from,
+            avatar: null,
+            lastMessage: payload.text,
+            time: new Date(payload.timestamp).toLocaleTimeString()
+          };
+          return [newChat, ...prevChats];
+        }
+      });
+    }
+  }, [lastMessage, nickname]);
 
   const openChat = (chat) => {
     setSelectedChat(chat.id);
