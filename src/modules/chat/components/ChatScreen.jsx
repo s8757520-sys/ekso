@@ -37,11 +37,9 @@ const ChatScreen = ({
   // ========== ЗАГРУЗКА ИСТОРИИ ИЗ localStorage ==========
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
-
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-
         if (Array.isArray(parsed) && parsed.length > 0) {
           setMessages(parsed);
           console.log(`📂 Загружено ${parsed.length} сообщений из localStorage`);
@@ -81,16 +79,10 @@ const ChatScreen = ({
         id: Date.now(),
         text: payload.text || 'Сообщение',
         sender: payload.from === nickname ? 'me' : 'them',
-        time: new Date(
-          payload.timestamp || Date.now()
-        ).toLocaleTimeString('ru-RU', {
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
+        time: new Date(payload.timestamp || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
       };
 
       setMessages(prev => [...prev, newMessage]);
-
       console.log('📩 Сообщение добавлено в чат:', newMessage);
     } else {
       console.log('⚠️ Сообщение не для этого чата, игнорируем');
@@ -116,16 +108,11 @@ const ChatScreen = ({
 
   const t = texts[lang] || texts.ru;
 
-  // ========== ОТПРАВКА СООБЩЕНИЯ ==========
   const sendMessageHandler = () => {
     if (!input.trim() || !isConnected) return;
 
     const now = new Date();
-
-    const time =
-      now.getHours().toString().padStart(2, '0') +
-      ':' +
-      now.getMinutes().toString().padStart(2, '0');
+    const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
 
     const newMessage = {
       id: Date.now(),
@@ -134,10 +121,8 @@ const ChatScreen = ({
       time,
     };
 
-    // Сразу показываем своё сообщение
     setMessages(prev => [...prev, newMessage]);
 
-    // Отправляем через WebSocket
     sendMessage('chat_message', {
       from: nickname,
       to: recipient,
@@ -150,61 +135,38 @@ const ChatScreen = ({
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-[var(--bg-primary)] rounded-xl overflow-hidden shadow-sm">
-
-      {/* ========== ШАПКА ЧАТА ========== */}
+    <div className="flex flex-col h-full min-h-[500px] bg-[var(--bg-primary)] rounded-xl overflow-hidden shadow-sm">
+      {/* ШАПКА ЧАТА */}
       <div className="bg-[var(--bg-secondary)] px-3 sm:px-4 py-3 border-b border-[var(--border-color)] flex items-center gap-3 flex-shrink-0">
-
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 bg-blue-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
           {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={displayName}
-              className="w-full h-full object-cover"
-            />
+            <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
           ) : (
             <span>{displayName.charAt(0).toUpperCase()}</span>
           )}
         </div>
-
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-[var(--text-primary)] text-sm sm:text-base">
             {displayName}
           </div>
-
-          <div
-            className={`text-[10px] sm:text-xs ${
-              isConnected ? 'text-green-500' : 'text-gray-400'
-            }`}
-          >
+          <div className={`text-[10px] sm:text-xs ${isConnected ? 'text-green-500' : 'text-gray-400'}`}>
             ● {isConnected ? t.online : t.offline}
           </div>
         </div>
-
-        <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg sm:text-xl">
-          📞
-        </button>
+        <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg sm:text-xl">📞</button>
       </div>
 
-      {/* ========== СООБЩЕНИЯ ========== */}
-      <div className="flex-1 min-h-0 p-3 sm:p-4 overflow-y-auto space-y-1">
-
+      {/* СООБЩЕНИЯ */}
+      <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-1">
         {messages.length === 0 && (
           <div className="text-center text-[var(--text-secondary)] text-sm mt-10">
-            {isConnected
-              ? 'Напишите первое сообщение'
-              : 'Подключение к серверу...'}
+            {isConnected ? 'Напишите первое сообщение' : 'Подключение к серверу...'}
           </div>
         )}
-
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex ${
-              msg.sender === 'me'
-                ? 'justify-end'
-                : 'justify-start'
-            }`}
+            className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}
           >
             <div
               className={`max-w-[85%] sm:max-w-[75%] px-3 sm:px-4 py-2 shadow-sm ${
@@ -213,38 +175,24 @@ const ChatScreen = ({
                   : 'bg-[var(--bg-chat-theirs)] text-[var(--text-primary)] rounded-2xl rounded-bl-sm'
               }`}
             >
-              <p className="text-sm sm:text-base leading-relaxed">
-                {msg.text}
-              </p>
-
-              <p className="text-[10px] sm:text-xs text-[var(--text-secondary)] mt-1">
-                {msg.time}
-              </p>
+              <p className="text-sm sm:text-base leading-relaxed">{msg.text}</p>
+              <p className="text-[10px] sm:text-xs text-[var(--text-secondary)] mt-1">{msg.time}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ========== ПОЛЕ ВВОДА ========== */}
+      {/* ПОЛЕ ВВОДА */}
       <div className="bg-[var(--bg-secondary)] p-2 sm:p-3 flex items-center gap-2 border-t border-[var(--border-color)] flex-shrink-0">
-
-        <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg sm:text-xl px-1">
-          😊1
-        </button>
-
+        <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg sm:text-xl px-1">😊</button>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={t.placeholder}
           className="flex-1 px-3 sm:px-4 py-2 bg-[var(--bg-primary)] rounded-full outline-none text-sm sm:text-base text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              sendMessageHandler();
-            }
-          }}
+          onKeyDown={(e) => e.key === 'Enter' && sendMessageHandler()}
         />
-
         <button
           onClick={sendMessageHandler}
           disabled={!isConnected || !input.trim()}
@@ -257,9 +205,8 @@ const ChatScreen = ({
           ➤
         </button>
       </div>
-
     </div>
   );
 };
 
-export default ChatScreen;
+export default ChatScreen;  ты можешь полный файл дать с этой правкой
