@@ -1,9 +1,10 @@
 /**
  * File: App.jsx
- * Date: 2026-09-07
+ * Date: 2026-09-08
  * Purpose: Main application component for Ekso onboarding
  * Updated: Added !isInvite to prevent session from blocking invite page
  * Author: Ekso Team
+ * Updated: При входе по PIN автоматически отправляем register_nickname на сервер
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -249,8 +250,19 @@ function App() {
     }
   };
 
+  // ========== ИСПРАВЛЕНО: при входе отправляем register_nickname ==========
   const handleLogin = (pinOrBiometric) => {
     console.log('🔓 Login successful');
+
+    // Регистрируемся на сервере при входе
+    if (nickname && masterKeyData?.wallet?.publicKey) {
+      sendMessage('register_nickname', {
+        nickname: nickname,
+        publicKey: masterKeyData.wallet.publicKey
+      });
+      console.log('📤 Re-registered on server:', nickname);
+    }
+
     setStep('main');
   };
 
