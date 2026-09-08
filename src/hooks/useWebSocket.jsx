@@ -4,6 +4,7 @@
  * Назначение: Хук для управления WebSocket-соединением с бэкендом Ekso
  * Описание: Подключается к wss://ekso.me/ws, обрабатывает события открытия, закрытия, ошибок и сообщений.
  * Добавлено: автоматическое переподключение (reconnect) при обрыве связи.
+ * Добавлено: window.lastMessage для отладки.
  * Автор: Ekso Team
  */
 
@@ -57,6 +58,8 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        window.lastMessage = data;   // ← для отладки
+        console.log('📩 WebSocket raw message:', data);
         setLastMessage(data);
       } catch (e) {
         console.error('❌ Ошибка парсинга сообщения:', e);
