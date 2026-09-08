@@ -1,13 +1,9 @@
 /**
  * File: ChatScreen.jsx
  * Date: 2026-09-08
- * Purpose: Chat interface with WebSocket integration — отправка на сервер
- * Description: Displays messages, sends/receives via WebSocket
+ * Purpose: Chat interface with WebSocket integration — с загрузкой истории
+ * Description: Displays messages, sends/receives via WebSocket, loads history from server
  * Author: Ekso Team
- * Updated: 
- *   - Добавлены recipientDisplayName и recipientAvatar
- *   - Автоматическое добавление https://ekso.me к путям аватарок
- *   - Улучшена обработка входящих сообщений
  */
 
 import { useState, useEffect } from 'react';
@@ -29,10 +25,59 @@ const ChatScreen = ({
 }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const { isConnected, sendMessage, lastMessage } = useWebSocket();
 
   const displayName = recipientDisplayName || recipient;
   const avatarUrl = getFullAvatarUrl(recipientAvatar);
+  
+  // Формируем chatId
+  const chatId = `chat_${[nickname, recipient].sort().join('_')}`;
+
+  // ========== ЗАГРУЗКА ИСТОРИИ ПРИ ОТКРЫТИИ ЧАТА ==========
+  useEffect(() => {
+    if (isConnected && recipient && !historyLoaded) {
+      console.log(`📤 Requesting history for ${chatId}`);
+      sendMessage('get_history', { chatId });
+      setHistoryLoaded(true);
+    }
+  }, [isConnected, recipient, chatId, historyLoaded]);
+
+  // ========== ОБРАБОТКА ИСТОРИИ ОТ СЕРВЕРА ==========
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'get_history_result') {
+      const payload = lastMessage.payload;
+      if (payload.chatId === chatId && payload.history) {
+        const historyMessages = payload.history.map((item, index) => ({
+          id: index,
+          text: item.text || 'Сообщение',
+          sender: item.from === nickname ? 'me' : 'them',
+          time: new Date(item.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+        }));
+        setMessages(historyMessages);
+        console.log(`📂 Загружено ${historyMessages.length} сообщений из истории`);
+      }
+    }
+  }, [lastMessage, chatId, nickname]);
+
+  // ========== ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ==========
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'chat_message') {
+      const payload = lastMessage.payload;
+      
+      if (payload.to === nickname || payload.from === recipient) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            text: payload.text || 'Сообщение',
+            sender: payload.from === nickname ? 'me' : 'them',
+            time: new Date(payload.timestamp || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      }
+    }
+  }, [lastMessage, nickname, recipient]);
 
   const texts = {
     ru: {
@@ -52,26 +97,6 @@ const ChatScreen = ({
   };
 
   const t = texts[lang] || texts.ru;
-
-  // ========== ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ==========
-  useEffect(() => {
-    if (lastMessage && lastMessage.type === 'chat_message') {
-      const payload = lastMessage.payload;
-      
-      // Проверяем, что сообщение адресовано текущему пользователю
-      if (payload.to === nickname || payload.from === recipient) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now(),
-            text: payload.text || 'Сообщение',
-            sender: payload.from === nickname ? 'me' : 'them',
-            time: new Date(payload.timestamp || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-          },
-        ]);
-      }
-    }
-  }, [lastMessage, nickname, recipient]);
 
   const sendMessageHandler = () => {
     if (!input.trim() || !isConnected) return;
@@ -93,7 +118,7 @@ const ChatScreen = ({
       from: nickname,
       to: recipient,
       text: input,
-      chatId: `chat_${[nickname, recipient].sort().join('_')}`,
+      chatId: chatId,
       timestamp: now.getTime(),
     });
 
