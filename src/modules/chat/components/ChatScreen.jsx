@@ -2,7 +2,7 @@
  * File: ChatScreen.jsx
  * Date: 2026-09-08
  * Purpose: Chat interface with WebSocket integration — с загрузкой истории
- * Description: Displays messages, sends/receives via WebSocket, loads history from server
+ * Description: Displays messages, sends/receives via WebSocket, loads history from localStorage
  * Author: Ekso Team
  */
 
@@ -33,15 +33,43 @@ const ChatScreen = ({
   
   // Формируем chatId
   const chatId = `chat_${[nickname, recipient].sort().join('_')}`;
+  const storageKey = `messages_${chatId}`;
 
-  // ========== ЗАГРУЗКА ИСТОРИИ ПРИ ОТКРЫТИИ ЧАТА ==========
+  // ========== ЗАГРУЗКА ИСТОРИИ ИЗ localStorage ==========
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          console.log(`📂 Загружено ${parsed.length} сообщений из localStorage`);
+        }
+      } catch (e) {
+        console.error('Ошибка загрузки истории:', e);
+      }
+    }
+  }, [storageKey]);
+
+  // ========== СОХРАНЕНИЕ ИСТОРИИ В localStorage ==========
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(storageKey, JSON.stringify(messages));
+    }
+  }, [messages, storageKey]);
+
+  // ========== ЗАГРУЗКА ИСТОРИИ С СЕРВЕРА (если нет локальной) ==========
   useEffect(() => {
     if (isConnected && recipient && !historyLoaded) {
-      console.log(`📤 Requesting history for ${chatId}`);
-      sendMessage('get_history', { chatId });
+      // Проверяем, есть ли локальная история
+      const saved = localStorage.getItem(storageKey);
+      if (!saved || JSON.parse(saved).length === 0) {
+        console.log(`📤 Requesting history from server for ${chatId}`);
+        sendMessage('get_history', { chatId });
+      }
       setHistoryLoaded(true);
     }
-  }, [isConnected, recipient, chatId, historyLoaded]);
+  }, [isConnected, recipient, chatId, historyLoaded, storageKey]);
 
   // ========== ОБРАБОТКА ИСТОРИИ ОТ СЕРВЕРА ==========
   useEffect(() => {
@@ -55,7 +83,7 @@ const ChatScreen = ({
           time: new Date(item.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
         }));
         setMessages(historyMessages);
-        console.log(`📂 Загружено ${historyMessages.length} сообщений из истории`);
+        console.log(`📂 Загружено ${historyMessages.length} сообщений из истории сервера`);
       }
     }
   }, [lastMessage, chatId, nickname]);
