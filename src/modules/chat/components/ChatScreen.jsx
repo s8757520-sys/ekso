@@ -1,4 +1,3 @@
-```jsx
 /**
  * File: ChatScreen.jsx
  * Date: 2026-09-08
@@ -264,4 +263,3 @@ const ChatScreen = ({
 };
 
 export default ChatScreen;
-```
