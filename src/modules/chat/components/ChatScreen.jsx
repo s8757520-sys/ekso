@@ -1,15 +1,12 @@
-```jsx
 /**
  * Файл: ChatScreen.jsx
  * Дата: 2026-09-08
  * Назначение: Интерфейс чата с WebSocket-интеграцией
  * Описание: Отображает сообщения, отправляет и получает сообщения через WebSocket.
- * Добавлено: защита от повторного добавления сообщений.
- * Добавлено: защита от повторной обработки старого lastChatMessage.
  * Автор: Ekso Team
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useWebSocketContext } from '../../../context/WebSocketContext';
 
 const getFullAvatarUrl = (avatar) => {
@@ -42,17 +39,11 @@ const ChatScreen = ({
   const storageKey = `messages_${chatId}`;
 
   /*
-   * Здесь храним ID WebSocket-событий, которые уже обработали
-   * в текущем экземпляре ChatScreen.
-   */
-  const processedEventIdsRef = useRef(new Set());
-
-  /*
    * Формируем стабильный ключ сообщения.
    *
    * Если сервер присылает messageId — используем его.
-   * Если нет — строим ключ из отправителя, получателя,
-   * timestamp и текста.
+   * Если нет — используем отправителя, получателя,
+   * timestamp и текст.
    */
   const getMessageKey = (payload) => {
     if (!payload) return null;
@@ -75,20 +66,24 @@ const ChatScreen = ({
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
 
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
+    if (!saved) {
+      setMessages([]);
+      return;
+    }
 
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
+    try {
+      const parsed = JSON.parse(saved);
 
-          console.log(
-            `📂 Загружено ${parsed.length} сообщений из localStorage`
-          );
-        }
-      } catch (e) {
-        console.error('Ошибка загрузки истории:', e);
+      if (Array.isArray(parsed)) {
+        setMessages(parsed);
+
+        console.log(
+          `📂 Загружено ${parsed.length} сообщений из localStorage`
+        );
       }
+    } catch (e) {
+      console.error('Ошибка загрузки истории:', e);
+      setMessages([]);
     }
   }, [storageKey]);
 
@@ -96,16 +91,22 @@ const ChatScreen = ({
    * Сохраняем историю.
    */
   useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify(messages)
-      );
-    }
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify(messages)
+    );
   }, [messages, storageKey]);
 
   /*
    * Получение сообщений через WebSocket.
+   *
+   * ВАЖНО:
+   * lastChatMessage хранится в Context.
+   * Поэтому при новом входе в ChatScreen он может содержать
+   * старое сообщение.
+   *
+   * Мы НЕ добавляем его, если такое сообщение уже есть
+   * в истории этого чата.
    */
   useEffect(() => {
     if (!lastChatMessage) return;
@@ -114,50 +115,19 @@ const ChatScreen = ({
 
     if (!payload) return;
 
-    /*
-     * Очень важно:
-     * если ChatScreen размонтировался и потом открылся снова,
-     * Context может содержать старое lastChatMessage.
-     *
-     * Поэтому событие с таким _eventId обрабатываем только один раз.
-     */
-    const eventId = lastChatMessage._eventId;
-
-    if (eventId && processedEventIdsRef.current.has(eventId)) {
-      console.log(
-        '♻️ WebSocket-событие уже обработано, пропускаем:',
-        eventId
-      );
-      return;
-    }
-
-    if (eventId) {
-      processedEventIdsRef.current.add(eventId);
-    }
-
     console.log(
       '📩 ChatScreen получил chat_message:',
       payload
     );
 
-    const messageKey = getMessageKey(payload);
-
-    console.log('🔍 CHAT FILTER:', {
-      nickname: JSON.stringify(nickname),
-      recipient: JSON.stringify(recipient),
-      from: JSON.stringify(payload.from),
-      to: JSON.stringify(payload.to),
-      toMatch: payload.to === nickname,
-      fromMatch: payload.from === recipient,
-      messageKey
-    });
-
     /*
-     * Сообщение должно относиться к этому чату.
+     * Проверяем, относится ли сообщение к открытому чату.
      */
     const isForThisChat =
-      payload.to === nickname ||
-      payload.from === recipient;
+      (payload.from === recipient &&
+        payload.to === nickname) ||
+      (payload.from === nickname &&
+        payload.to === recipient);
 
     if (!isForThisChat) {
       console.log(
@@ -166,19 +136,79 @@ const ChatScreen = ({
       return;
     }
 
-    /*
-     * Если сообщение уже есть в текущем массиве,
-     * повторно его не добавляем.
-     *
-     * Проверяем messageKey.
-     */
+    const messageKey = getMessageKey(payload);
+
+    if (!messageKey) {
+      return;
+    }
+
+    console.log(
+      '🔑 Ключ сообщения:',
+      messageKey
+    );
+
     setMessages(prev => {
-      if (
-        messageKey &&
-        prev.some(msg => msg.messageKey === messageKey)
-      ) {
+
+      /*
+       * =====================================================
+       * ГЛАВНАЯ ЗАЩИТА ОТ ДУБЛИКАТОВ
+       * =====================================================
+       *
+       * Проверяем уже существующие сообщения.
+       *
+       * Поэтому не имеет значения, сколько раз ChatScreen
+       * был открыт заново.
+       */
+      const alreadyExists = prev.some(msg => {
+
+        /*
+         * Основная проверка.
+         */
+        if (
+          msg.messageKey &&
+          msg.messageKey === messageKey
+        ) {
+          return true;
+        }
+
+        /*
+         * Проверка по messageId.
+         */
+        if (
+          payload.messageId &&
+          msg.messageId &&
+          msg.messageId === payload.messageId
+        ) {
+          return true;
+        }
+
+        /*
+         * Защита старых сообщений,
+         * которые были сохранены до появления messageKey.
+         */
+        if (
+          msg.text === payload.text &&
+          msg.from === payload.from &&
+          msg.to === payload.to &&
+          msg.timestampMs &&
+          payload.timestamp &&
+          Math.abs(
+            Number(msg.timestampMs) -
+            Number(payload.timestamp)
+          ) < 2000
+        ) {
+          return true;
+        }
+
+        return false;
+      });
+
+      /*
+       * Уже есть — ничего не добавляем.
+       */
+      if (alreadyExists) {
         console.log(
-          '♻️ Сообщение уже существует в истории, пропускаем:',
+          '♻️ Сообщение уже есть в истории — пропускаем:',
           messageKey
         );
 
@@ -186,42 +216,67 @@ const ChatScreen = ({
       }
 
       /*
-       * Дополнительная защита для серверного echo
-       * собственного сообщения.
-       *
-       * Если мы уже добавили такое сообщение локально,
-       * серверное echo не должно создавать второй экземпляр.
+       * =====================================================
+       * ЗАЩИТА ОТ ECHO НАШЕГО СООБЩЕНИЯ
+       * =====================================================
        */
-      if (
-        payload.from === nickname &&
-        prev.some(
-          msg =>
-            msg.sender === 'me' &&
-            msg.text === payload.text &&
-            (
-              !payload.timestamp ||
-              Math.abs(
-                Number(msg.timestampMs || 0) -
-                Number(payload.timestamp)
-              ) < 10000
-            )
-        )
-      ) {
-        console.log(
-          '♻️ Сервер вернул наше сообщение, дубль пропускаем'
-        );
+      if (payload.from === nickname) {
 
-        return prev;
+        const ownMessageExists = prev.some(msg => {
+
+          if (msg.sender !== 'me') {
+            return false;
+          }
+
+          if (msg.text !== payload.text) {
+            return false;
+          }
+
+          if (!payload.timestamp || !msg.timestampMs) {
+            return false;
+          }
+
+          return (
+            Math.abs(
+              Number(msg.timestampMs) -
+              Number(payload.timestamp)
+            ) < 10000
+          );
+        });
+
+        if (ownMessageExists) {
+          console.log(
+            '♻️ Сервер вернул наше сообщение — пропускаем'
+          );
+
+          return prev;
+        }
       }
+
+      /*
+       * =====================================================
+       * НОВОЕ СООБЩЕНИЕ
+       * =====================================================
+       */
 
       const timestamp =
         payload.timestamp || Date.now();
 
       const newMessage = {
-        id: messageKey || `${Date.now()}_${Math.random()}`,
+        id: messageKey,
         messageKey,
+        messageId: payload.messageId || null,
+
+        from: payload.from || '',
+        to: payload.to || '',
+
         text: payload.text || 'Сообщение',
-        sender: payload.from === nickname ? 'me' : 'them',
+
+        sender:
+          payload.from === nickname
+            ? 'me'
+            : 'them',
+
         time: new Date(timestamp).toLocaleTimeString(
           'ru-RU',
           {
@@ -229,16 +284,18 @@ const ChatScreen = ({
             minute: '2-digit'
           }
         ),
+
         timestampMs: timestamp
       };
 
       console.log(
-        '📩 Сообщение добавлено в чат:',
+        '📩 НОВОЕ сообщение добавлено в чат:',
         newMessage
       );
 
       return [...prev, newMessage];
     });
+
   }, [lastChatMessage, nickname, recipient]);
 
   const texts = {
@@ -274,10 +331,7 @@ const ChatScreen = ({
     const timestamp = now.getTime();
 
     /*
-     * Создаём уникальный ID сообщения.
-     *
-     * Если сервер сохранит messageId и вернёт его обратно,
-     * это даст идеальную дедупликацию.
+     * Уникальный ID сообщения.
      */
     const messageId =
       `${nickname}_${timestamp}_${Math.random()
@@ -296,6 +350,10 @@ const ChatScreen = ({
       id: messageKey,
       messageKey,
       messageId,
+
+      from: nickname,
+      to: recipient,
+
       text,
       sender: 'me',
       time,
@@ -303,12 +361,14 @@ const ChatScreen = ({
     };
 
     /*
-     * Сначала показываем сообщение локально,
-     * чтобы интерфейс не ждал сервер.
+     * Сначала показываем сообщение локально.
      */
     setMessages(prev => {
+
       if (
-        prev.some(msg => msg.messageKey === messageKey)
+        prev.some(
+          msg => msg.messageKey === messageKey
+        )
       ) {
         return prev;
       }
@@ -317,10 +377,7 @@ const ChatScreen = ({
     });
 
     /*
-     * Отправляем тот же messageId серверу.
-     *
-     * Если сервер его возвращает в payload,
-     * ChatScreen сможет однозначно определить echo.
+     * Отправляем сообщение серверу.
      */
     const sent = sendMessage('chat_message', {
       messageId,
@@ -332,9 +389,8 @@ const ChatScreen = ({
     });
 
     /*
-     * Если WebSocket внезапно оказался закрыт,
-     * локально добавленное сообщение лучше удалить,
-     * поскольку сервер его не получил.
+     * Если отправка не удалась —
+     * удаляем оптимистическое сообщение.
      */
     if (!sent) {
       setMessages(prev =>
@@ -466,4 +522,3 @@ const ChatScreen = ({
 };
 
 export default ChatScreen;
-```
