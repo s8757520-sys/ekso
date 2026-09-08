@@ -8,8 +8,9 @@
  *   - Информационная заглушка вместо пустого списка чатов
  *   - Кнопки: Добавить контакт, Ссылка на профиль, Гостевой чат
  *   - Добавлена обработка входящих chat_message
- *   - Добавлен индикатор непрочитанных сообщений (красный/зелёный кружок)
+ *   - Добавлен индикатор непрочитанных сообщений (зелёный мерцающий кружок)
  *   - Добавлен window.ws для отладки
+ *   - Под именем контакта отображается "📩 Есть новое сообщение"
  */
 
 import { useState, useEffect } from 'react';
@@ -356,12 +357,14 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
                   <span className="text-xs text-[var(--text-secondary)]">{chat.time || '—'}</span>
                   {/* Индикатор непрочитанных */}
                   {chat.unread ? (
-                    <span className="w-3 h-3 bg-red-500 rounded-full inline-block ml-2"></span>
+                    <span className="w-3 h-3 bg-green-500 rounded-full inline-block ml-2 animate-pulse"></span>
                   ) : (
-                    <span className="w-3 h-3 bg-green-500 rounded-full inline-block ml-2"></span>
+                    <span className="w-3 h-3 bg-gray-400 rounded-full inline-block ml-2"></span>
                   )}
                 </div>
-                <p className="text-sm text-[var(--text-secondary)] truncate">{chat.lastMessage || 'Нет сообщений'}</p>
+                <p className="text-sm text-[var(--text-secondary)] truncate">
+                  {chat.unread ? '📩 Есть новое сообщение' : (chat.lastMessage || 'Нет сообщений')}
+                </p>
               </div>
             </div>
           ))
