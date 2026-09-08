@@ -1,18 +1,18 @@
 /**
  * File: ChatScreen.jsx
- * Date: 2026-09-07
+ * Date: 2026-09-08
  * Purpose: Chat interface with WebSocket integration — отправка на сервер
  * Description: Displays messages, sends/receives via WebSocket
  * Author: Ekso Team
  * Updated: 
- *   - Добавлены recipientDisplayName и recipientAvatar для отображения в шапке чата
+ *   - Добавлены recipientDisplayName и recipientAvatar
  *   - Автоматическое добавление https://ekso.me к путям аватарок
+ *   - Улучшена обработка входящих сообщений
  */
 
 import { useState, useEffect } from 'react';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 
-// Функция для получения полного URL аватарки
 const getFullAvatarUrl = (avatar) => {
   if (!avatar) return null;
   if (avatar.startsWith('http')) return avatar;
@@ -31,7 +31,6 @@ const ChatScreen = ({
   const [input, setInput] = useState('');
   const { isConnected, sendMessage, lastMessage } = useWebSocket();
 
-  // Определяем отображаемое имя (displayName или recipient)
   const displayName = recipientDisplayName || recipient;
   const avatarUrl = getFullAvatarUrl(recipientAvatar);
 
@@ -54,21 +53,25 @@ const ChatScreen = ({
 
   const t = texts[lang] || texts.ru;
 
-  // Обработка входящих сообщений с сервера
+  // ========== ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ==========
   useEffect(() => {
     if (lastMessage && lastMessage.type === 'chat_message') {
       const payload = lastMessage.payload;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          text: payload.text || 'Сообщение',
-          sender: 'them',
-          time: new Date(payload.timestamp || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
+      
+      // Проверяем, что сообщение адресовано текущему пользователю
+      if (payload.to === nickname || payload.from === recipient) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            text: payload.text || 'Сообщение',
+            sender: payload.from === nickname ? 'me' : 'them',
+            time: new Date(payload.timestamp || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      }
     }
-  }, [lastMessage]);
+  }, [lastMessage, nickname, recipient]);
 
   const sendMessageHandler = () => {
     if (!input.trim() || !isConnected) return;
@@ -101,7 +104,6 @@ const ChatScreen = ({
     <div className="flex flex-col h-[400px] sm:h-[500px] md:h-[550px] bg-[var(--bg-primary)] rounded-xl overflow-hidden shadow-sm">
       {/* ШАПКА ЧАТА */}
       <div className="bg-[var(--bg-secondary)] px-3 sm:px-4 py-3 border-b border-[var(--border-color)] flex items-center gap-3 flex-shrink-0">
-        {/* Аватарка собеседника */}
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 bg-blue-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
           {avatarUrl ? (
             <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
@@ -110,7 +112,6 @@ const ChatScreen = ({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          {/* Имя собеседника (displayName или recipient) */}
           <div className="font-semibold text-[var(--text-primary)] text-sm sm:text-base">
             {displayName}
           </div>
