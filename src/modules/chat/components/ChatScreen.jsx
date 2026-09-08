@@ -4,7 +4,7 @@
  * Purpose: Chat interface with WebSocket integration
  * Description: Displays messages, sends/receives via WebSocket
  * Author: Ekso Team
- * Updated: Использует lastChatMessage из контекста вместо lastMessage
+ * Updated: Использует messageQueue из WebSocketContext для получения всех сообщений
  */
 
 import { useState, useEffect } from 'react';
@@ -26,7 +26,7 @@ const ChatScreen = ({
 }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const { isConnected, sendMessage, lastChatMessage } = useWebSocketContext();
+  const { isConnected, sendMessage, messageQueue } = useWebSocketContext();
 
   const displayName = recipientDisplayName || recipient;
   const avatarUrl = getFullAvatarUrl(recipientAvatar);
@@ -57,23 +57,26 @@ const ChatScreen = ({
     }
   }, [messages, storageKey]);
 
-  // ========== ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ==========
+  // ========== ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ИЗ ОЧЕРЕДИ ==========
   useEffect(() => {
-    if (!lastChatMessage) return;
+    if (!messageQueue || messageQueue.length === 0) return;
 
-    const payload = lastChatMessage.payload;
+    // Находим последнее chat_message в очереди
+    const chatMessages = messageQueue.filter(msg => msg.type === 'chat_message');
+    if (chatMessages.length === 0) return;
 
-    console.log('📩 ChatScreen получил chat_message:', payload);
+    const lastChat = chatMessages[chatMessages.length - 1];
+    const payload = lastChat.payload;
 
-    console.log('🔍 CHAT FILTER:', {
-      nickname: JSON.stringify(nickname),
-      recipient: JSON.stringify(recipient),
-      from: JSON.stringify(payload.from),
-      to: JSON.stringify(payload.to),
-      toMatch: payload.to === nickname,
-      fromMatch: payload.from === recipient
+    console.log('📩 Обработка chat_message из очереди:', {
+      from: payload.from,
+      to: payload.to,
+      text: payload.text,
+      nickname: nickname,
+      recipient: recipient
     });
 
+    // Проверяем, что сообщение для этого чата
     if (payload.to === nickname || payload.from === recipient) {
       const newMessage = {
         id: Date.now(),
@@ -81,13 +84,13 @@ const ChatScreen = ({
         sender: payload.from === nickname ? 'me' : 'them',
         time: new Date(payload.timestamp || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
       };
-
+      
       setMessages(prev => [...prev, newMessage]);
       console.log('📩 Сообщение добавлено в чат:', newMessage);
     } else {
       console.log('⚠️ Сообщение не для этого чата, игнорируем');
     }
-  }, [lastChatMessage, nickname, recipient]);
+  }, [messageQueue, nickname, recipient]);
 
   const texts = {
     ru: {
@@ -209,4 +212,4 @@ const ChatScreen = ({
   );
 };
 
-export default ChatScreen;  ты можешь полный файл дать с этой правкой
+export default ChatScreen;
