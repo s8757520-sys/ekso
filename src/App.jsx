@@ -4,7 +4,7 @@
  * Purpose: Main application component for Ekso onboarding
  * Updated: Added !isInvite to prevent session from blocking invite page
  * Author: Ekso Team
- * Updated: При входе по PIN автоматически отправляем register_nickname на сервер
+ * Updated: При входе по PIN отправляем user_online вместо register_nickname
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -250,17 +250,14 @@ function App() {
     }
   };
 
-  // ========== ИСПРАВЛЕНО: при входе отправляем register_nickname ==========
+  // ========== ИСПРАВЛЕНО: при входе отправляем user_online ==========
   const handleLogin = (pinOrBiometric) => {
     console.log('🔓 Login successful');
 
-    // Регистрируемся на сервере при входе
-    if (nickname && masterKeyData?.wallet?.publicKey) {
-      sendMessage('register_nickname', {
-        nickname: nickname,
-        publicKey: masterKeyData.wallet.publicKey
-      });
-      console.log('📤 Re-registered on server:', nickname);
+    // Отмечаем пользователя как онлайн на сервере
+    if (nickname) {
+      sendMessage('user_online', { nickname });
+      console.log('📤 user_online sent for:', nickname);
     }
 
     setStep('main');
