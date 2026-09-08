@@ -1,17 +1,14 @@
 /**
  * File: ChatScreen.jsx
  * Date: 2026-09-08
- * Purpose: Chat interface with WebSocket integration — с загрузкой истории
- * Description: Displays messages, sends/receives via WebSocket, loads history from localStorage
+ * Purpose: Chat interface with WebSocket integration
+ * Description: Displays messages, sends/receives via WebSocket
  * Author: Ekso Team
- * Updated: 
- *   - Поле ввода прикреплено внизу экрана
- *   - Добавлен лог всех lastMessage для отладки
- *   - Добавлен точный лог сравнения nickname, recipient, from, to
+ * Updated: Использует WebSocketContext вместо прямого вызова useWebSocket
  */
 
 import { useState, useEffect } from 'react';
-import { useWebSocket } from '../../../hooks/useWebSocket';
+import { useWebSocketContext } from '../../../context/WebSocketContext';
 
 const getFullAvatarUrl = (avatar) => {
   if (!avatar) return null;
@@ -29,8 +26,7 @@ const ChatScreen = ({
 }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [historyLoaded, setHistoryLoaded] = useState(false);
-  const { isConnected, sendMessage, lastMessage } = useWebSocket();
+  const { isConnected, sendMessage, lastMessage } = useWebSocketContext();
 
   const displayName = recipientDisplayName || recipient;
   const avatarUrl = getFullAvatarUrl(recipientAvatar);
@@ -61,51 +57,19 @@ const ChatScreen = ({
     }
   }, [messages, storageKey]);
 
-  // ========== ЗАГРУЗКА ИСТОРИИ С СЕРВЕРА (если нет локальной) ==========
+  // ========== ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ==========
   useEffect(() => {
-    if (isConnected && recipient && !historyLoaded) {
-      const saved = localStorage.getItem(storageKey);
-      if (!saved || JSON.parse(saved).length === 0) {
-        console.log(`📤 Requesting history from server for ${chatId}`);
-        sendMessage('get_history', { chatId });
-      }
-      setHistoryLoaded(true);
-    }
-  }, [isConnected, recipient, chatId, historyLoaded, storageKey]);
-
-  // ========== ОБРАБОТКА ИСТОРИИ ОТ СЕРВЕРА ==========
-  useEffect(() => {
-    if (lastMessage && lastMessage.type === 'get_history_result') {
-      const payload = lastMessage.payload;
-      if (payload.chatId === chatId && payload.history) {
-        const historyMessages = payload.history.map((item, index) => ({
-          id: index,
-          text: item.text || 'Сообщение',
-          sender: item.from === nickname ? 'me' : 'them',
-          time: new Date(item.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-        }));
-        setMessages(historyMessages);
-        console.log(`📂 Загружено ${historyMessages.length} сообщений из истории сервера`);
-      }
-    }
-  }, [lastMessage, chatId, nickname]);
-
-  // ========== ОБРАБОТКА ВСЕХ ВХОДЯЩИХ СООБЩЕНИЙ (С ЛОГОМ) ==========
-  useEffect(() => {
-    // Логируем ВСЕ lastMessage, чтобы увидеть, что приходит
-    console.log('📩 Все lastMessage:', lastMessage);
-
     if (lastMessage && lastMessage.type === 'chat_message') {
       const payload = lastMessage.payload;
       
-      console.log('🔍 Сравнение для ChatScreen:', {
-        nickname: JSON.stringify(nickname),
-        recipient: JSON.stringify(recipient),
-        from: JSON.stringify(payload.from),
-        to: JSON.stringify(payload.to),
-        payload: payload
+      console.log('📩 Входящее сообщение в ChatScreen:', {
+        from: payload.from,
+        to: payload.to,
+        text: payload.text,
+        nickname: nickname,
+        recipient: recipient
       });
-
+      
       if (payload.to === nickname || payload.from === recipient) {
         setMessages((prev) => [
           ...prev,
@@ -116,6 +80,7 @@ const ChatScreen = ({
             time: new Date(payload.timestamp || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
           },
         ]);
+        console.log('📩 Сообщение добавлено в чат');
       }
     }
   }, [lastMessage, nickname, recipient]);
@@ -168,7 +133,6 @@ const ChatScreen = ({
 
   return (
     <div className="flex flex-col h-full min-h-[500px] bg-[var(--bg-primary)] rounded-xl overflow-hidden shadow-sm">
-      {/* ШАПКА ЧАТА */}
       <div className="bg-[var(--bg-secondary)] px-3 sm:px-4 py-3 border-b border-[var(--border-color)] flex items-center gap-3 flex-shrink-0">
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 bg-blue-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
           {avatarUrl ? (
@@ -188,7 +152,6 @@ const ChatScreen = ({
         <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg sm:text-xl">📞</button>
       </div>
 
-      {/* СООБЩЕНИЯ — занимает всё свободное место */}
       <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-1">
         {messages.length === 0 && (
           <div className="text-center text-[var(--text-secondary)] text-sm mt-10">
@@ -214,7 +177,6 @@ const ChatScreen = ({
         ))}
       </div>
 
-      {/* ПОЛЕ ВВОДА — ПРИКРЕПЛЕНО ВНИЗУ */}
       <div className="bg-[var(--bg-secondary)] p-2 sm:p-3 flex items-center gap-2 border-t border-[var(--border-color)] flex-shrink-0">
         <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg sm:text-xl px-1">😊</button>
         <input
