@@ -1,11 +1,13 @@
 /**
  * Файл: useWebSocket.jsx
- * Дата: 2026-09-07
+ * Дата: 2026-09-08
  * Назначение: Хук для управления WebSocket-соединением с бэкендом Ekso
- * Описание: Подключается к wss://ekso.me/ws, обрабатывает события открытия, закрытия, ошибок и сообщений.
+ * Описание: Подключается к wss://ekso.me/ws, обрабатывает события открытия,
+ * закрытия, ошибок и сообщений.
  * Добавлено: автоматическое переподключение (reconnect) при обрыве связи.
  * Добавлено: window.lastMessage для отладки.
  * Добавлено: lastChatMessage для отдельного потока чатов.
+ * Добавлено: защита от повторной обработки одного и того же chat_message.
  * Автор: Ekso Team
  */
 
@@ -15,24 +17,40 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
   const [lastChatMessage, setLastChatMessage] = useState(null);
+
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 10;
 
+  // Последний chat_message получает уникальный eventId.
+  // Это позволяет ChatScreen отличать новое событие от старого.
+  const chatMessageCounterRef = useRef(0);
+
   const connect = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+    if (
+      wsRef.current &&
+      (
+        wsRef.current.readyState === WebSocket.OPEN ||
+        wsRef.current.readyState === WebSocket.CONNECTING
+      )
+    ) {
       return;
     }
 
-    console.log(`🔄 Подключение к WebSocket (попытка ${reconnectAttemptsRef.current + 1})...`);
+    console.log(
+      `🔄 Подключение к WebSocket (попытка ${reconnectAttemptsRef.current + 1})...`
+    );
+
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => {
       console.log('✅ WebSocket подключён к', url);
+
       setIsConnected(true);
       reconnectAttemptsRef.current = 0;
+
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
@@ -40,8 +58,20 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
     };
 
     ws.onclose = (event) => {
-      console.log('❌ WebSocket отключён. Код:', event.code, 'Причина:', event.reason);
-      setIsConnected(false);
+      console.log(
+        '❌ WebSocket отключён. Код:',
+        event.code,
+        'Причина:',
+        event.reason
+      );
+
+      // Не меняем состояние от старого сокета,
+      // если уже существует новое соединение.
+      if (wsRef.current === ws) {
+        wsRef.current = null;
+        setIsConnected(false);
+      }
+
       if (event.code !== 1000) {
         attemptReconnect();
       }
@@ -49,7 +79,13 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
 
     ws.onerror = (error) => {
       console.error('⚠️ WebSocket ошибка:', error);
-      if (wsRef.current && wsRef.current.readyState !== WebSocket.OPEN) {
+
+      if (
+        wsRef.current === ws &&
+        ws.readyState !== WebSocket.OPEN &&
+        ws.readyState !== WebSocket.CLOSING &&
+        ws.readyState !== WebSocket.CLOSED
+      ) {
         attemptReconnect();
       }
     };
@@ -57,13 +93,27 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+
         window.lastMessage = data;
+
         console.log('📩 WebSocket raw message:', data);
+
         setLastMessage(data);
 
-        // Отдельно сохраняем chat_message, чтобы не потерять его
         if (data.type === 'chat_message') {
-          setLastChatMessage(data);
+          chatMessageCounterRef.current += 1;
+
+          /*
+           * Создаём новый объект, а не просто сохраняем data.
+           * eventId существует только внутри клиента и обозначает
+           * именно факт получения этого WebSocket-события.
+           */
+          const chatEvent = {
+            ...data,
+            _eventId: `${Date.now()}_${chatMessageCounterRef.current}`,
+          };
+
+          setLastChatMessage(chatEvent);
         }
       } catch (e) {
         console.error('❌ Ошибка парсинга сообщения:', e);
@@ -73,7 +123,9 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
 
   const attemptReconnect = () => {
     if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-      console.error('❌ Достигнуто максимальное количество попыток переподключения.');
+      console.error(
+        '❌ Достигнуто максимальное количество попыток переподключения.'
+      );
       return;
     }
 
@@ -81,8 +133,15 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
       clearTimeout(reconnectTimeoutRef.current);
     }
 
-    const delay = Math.min(1000 * Math.pow(1.5, reconnectAttemptsRef.current), 30000);
-    console.log(`⏳ Переподключение через ${delay}мс (попытка ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`);
+    const delay = Math.min(
+      1000 * Math.pow(1.5, reconnectAttemptsRef.current),
+      30000
+    );
+
+    console.log(
+      `⏳ Переподключение через ${delay}мс ` +
+      `(попытка ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`
+    );
 
     reconnectTimeoutRef.current = setTimeout(() => {
       reconnectAttemptsRef.current += 1;
@@ -96,21 +155,50 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.close(1000, 'Компонент размонтирован');
+
+      const ws = wsRef.current;
+
+      if (ws) {
+        // Убираем обработчики перед закрытием,
+        // чтобы старый сокет не влиял на новое состояние.
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null;
+
+        if (
+          ws.readyState === WebSocket.OPEN ||
+          ws.readyState === WebSocket.CONNECTING
+        ) {
+          ws.close(1000, 'Компонент размонтирован');
+        }
+
+        wsRef.current = null;
       }
+
+      setIsConnected(false);
     };
   }, [url]);
 
   const sendMessage = (type, payload) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type, payload }));
+    if (
+      wsRef.current &&
+      wsRef.current.readyState === WebSocket.OPEN
+    ) {
+      wsRef.current.send(
+        JSON.stringify({
+          type,
+          payload,
+        })
+      );
+
       return true;
-    } else {
-      console.warn('⚠️ WebSocket не открыт, сообщение не отправлено');
-      return false;
     }
+
+    console.warn('⚠️ WebSocket не открыт, сообщение не отправлено');
+    return false;
   };
 
   return {
@@ -118,6 +206,6 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
     lastMessage,
     lastChatMessage,
     sendMessage,
-    ws: wsRef.current
+    ws: wsRef.current,
   };
 };
