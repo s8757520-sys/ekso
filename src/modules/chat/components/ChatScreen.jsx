@@ -4,8 +4,10 @@
  * Purpose: Chat interface with WebSocket integration — с загрузкой истории
  * Description: Displays messages, sends/receives via WebSocket, loads history from localStorage
  * Author: Ekso Team
- * Updated: Поле ввода прикреплено внизу экрана (исправлено)
- * Debug: Добавлен точный лог сравнения nickname, recipient, from, to
+ * Updated: 
+ *   - Поле ввода прикреплено внизу экрана
+ *   - Добавлен лог всех lastMessage для отладки
+ *   - Добавлен точный лог сравнения nickname, recipient, from, to
  */
 
 import { useState, useEffect } from 'react';
@@ -88,8 +90,11 @@ const ChatScreen = ({
     }
   }, [lastMessage, chatId, nickname]);
 
-  // ========== ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ (С ТОЧНЫМ ЛОГОМ) ==========
+  // ========== ОБРАБОТКА ВСЕХ ВХОДЯЩИХ СООБЩЕНИЙ (С ЛОГОМ) ==========
   useEffect(() => {
+    // Логируем ВСЕ lastMessage, чтобы увидеть, что приходит
+    console.log('📩 Все lastMessage:', lastMessage);
+
     if (lastMessage && lastMessage.type === 'chat_message') {
       const payload = lastMessage.payload;
       
@@ -162,7 +167,7 @@ const ChatScreen = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-primary)] rounded-xl overflow-hidden shadow-sm">
+    <div className="flex flex-col h-full min-h-[500px] bg-[var(--bg-primary)] rounded-xl overflow-hidden shadow-sm">
       {/* ШАПКА ЧАТА */}
       <div className="bg-[var(--bg-secondary)] px-3 sm:px-4 py-3 border-b border-[var(--border-color)] flex items-center gap-3 flex-shrink-0">
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 bg-blue-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
@@ -183,7 +188,7 @@ const ChatScreen = ({
         <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg sm:text-xl">📞</button>
       </div>
 
-      {/* СООБЩЕНИЯ */}
+      {/* СООБЩЕНИЯ — занимает всё свободное место */}
       <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-1">
         {messages.length === 0 && (
           <div className="text-center text-[var(--text-secondary)] text-sm mt-10">
