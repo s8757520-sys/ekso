@@ -8,6 +8,8 @@
  *   - Информационная заглушка вместо пустого списка чатов
  *   - Кнопки: Добавить контакт, Ссылка на профиль, Гостевой чат
  *   - Добавлена обработка входящих chat_message
+ *   - Добавлен индикатор непрочитанных сообщений (красный/зелёный кружок)
+ *   - Добавлен window.ws для отладки
  */
 
 import { useState, useEffect } from 'react';
@@ -37,7 +39,11 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
   const [currentScreen, setCurrentScreen] = useState('chats');
   const [chats, setChats] = useState([]);
 
-  const { isConnected, sendMessage, lastMessage } = useWebSocket();
+  const { isConnected, sendMessage, lastMessage, ws } = useWebSocket();
+
+  // ========== ДЛЯ ОТЛАДКИ ==========
+  window.ws = ws;
+  window.sendMessage = sendMessage;
 
   // Загружаем чаты из localStorage
   useEffect(() => {
@@ -91,27 +97,25 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
       const payload = lastMessage.payload;
       console.log('📩 Новое сообщение от', payload.from, ':', payload.text);
 
-      // Обновляем список чатов (если нужно)
       setChats(prevChats => {
         const chatId = payload.chatId || `chat_${[nickname, payload.from].sort().join('_')}`;
         const existingChat = prevChats.find(c => c.id === chatId || c.name === payload.from);
         
         if (existingChat) {
-          // Обновляем последнее сообщение
           return prevChats.map(c => 
             (c.id === chatId || c.name === payload.from) 
-              ? { ...c, lastMessage: payload.text, time: new Date(payload.timestamp).toLocaleTimeString() }
+              ? { ...c, lastMessage: payload.text, time: new Date(payload.timestamp).toLocaleTimeString(), unread: true }
               : c
           );
         } else {
-          // Добавляем новый чат
           const newChat = {
             id: chatId,
             name: payload.from,
             displayName: payload.from,
             avatar: null,
             lastMessage: payload.text,
-            time: new Date(payload.timestamp).toLocaleTimeString()
+            time: new Date(payload.timestamp).toLocaleTimeString(),
+            unread: true
           };
           return [newChat, ...prevChats];
         }
@@ -124,6 +128,13 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
     setSelectedChatName(chat.name || chat.id);
     setSelectedChatDisplayName(chat.displayName || chat.name || chat.id);
     setSelectedChatAvatar(getFullAvatarUrl(chat.avatar));
+    
+    // Сбрасываем unread при открытии чата
+    setChats(prevChats => 
+      prevChats.map(c => 
+        c.id === chat.id ? { ...c, unread: false } : c
+      )
+    );
   };
 
   const toggleSidebar = () => {
@@ -343,6 +354,12 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
                     {chat.displayName || chat.name || chat.id}
                   </span>
                   <span className="text-xs text-[var(--text-secondary)]">{chat.time || '—'}</span>
+                  {/* Индикатор непрочитанных */}
+                  {chat.unread ? (
+                    <span className="w-3 h-3 bg-red-500 rounded-full inline-block ml-2"></span>
+                  ) : (
+                    <span className="w-3 h-3 bg-green-500 rounded-full inline-block ml-2"></span>
+                  )}
                 </div>
                 <p className="text-sm text-[var(--text-secondary)] truncate">{chat.lastMessage || 'Нет сообщений'}</p>
               </div>
