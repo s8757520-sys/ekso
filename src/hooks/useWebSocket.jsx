@@ -5,6 +5,7 @@
  * Описание: Подключается к wss://ekso.me/ws, обрабатывает события открытия, закрытия, ошибок и сообщений.
  * Добавлено: автоматическое переподключение (reconnect) при обрыве связи.
  * Добавлено: window.lastMessage для отладки.
+ * Добавлено: lastChatMessage для отдельного потока чатов.
  * Автор: Ekso Team
  */
 
@@ -13,6 +14,7 @@ import { useEffect, useRef, useState } from 'react';
 export const useWebSocket = (url = 'wss://ekso.me/ws') => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
+  const [lastChatMessage, setLastChatMessage] = useState(null);
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
@@ -20,7 +22,7 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
 
   const connect = () => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      return; // Уже подключены
+      return;
     }
 
     console.log(`🔄 Подключение к WebSocket (попытка ${reconnectAttemptsRef.current + 1})...`);
@@ -30,7 +32,7 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
     ws.onopen = () => {
       console.log('✅ WebSocket подключён к', url);
       setIsConnected(true);
-      reconnectAttemptsRef.current = 0; // Сброс попыток при успешном подключении
+      reconnectAttemptsRef.current = 0;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
@@ -40,8 +42,6 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
     ws.onclose = (event) => {
       console.log('❌ WebSocket отключён. Код:', event.code, 'Причина:', event.reason);
       setIsConnected(false);
-
-      // Автоматическое переподключение, если не было явного закрытия (код 1000)
       if (event.code !== 1000) {
         attemptReconnect();
       }
@@ -49,7 +49,6 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
 
     ws.onerror = (error) => {
       console.error('⚠️ WebSocket ошибка:', error);
-      // При ошибке тоже пробуем переподключиться
       if (wsRef.current && wsRef.current.readyState !== WebSocket.OPEN) {
         attemptReconnect();
       }
@@ -58,9 +57,14 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        window.lastMessage = data;   // ← для отладки
+        window.lastMessage = data;
         console.log('📩 WebSocket raw message:', data);
         setLastMessage(data);
+
+        // Отдельно сохраняем chat_message, чтобы не потерять его
+        if (data.type === 'chat_message') {
+          setLastChatMessage(data);
+        }
       } catch (e) {
         console.error('❌ Ошибка парсинга сообщения:', e);
       }
@@ -109,5 +113,11 @@ export const useWebSocket = (url = 'wss://ekso.me/ws') => {
     }
   };
 
-  return { isConnected, lastMessage, sendMessage, ws: wsRef.current };
+  return {
+    isConnected,
+    lastMessage,
+    lastChatMessage,
+    sendMessage,
+    ws: wsRef.current
+  };
 };
