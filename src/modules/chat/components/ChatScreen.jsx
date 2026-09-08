@@ -184,7 +184,7 @@ const ChatScreen = ({
 
       {/* ПОЛЕ ВВОДА */}
       <div className="bg-[var(--bg-secondary)] p-2 sm:p-3 flex items-center gap-2 border-t border-[var(--border-color)] flex-shrink-0">
-        <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg sm:text-xl px-1">😊</button>
+        <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg sm:text-xl px-1">😊1</button>
         <input
           type="text"
           value={input}
