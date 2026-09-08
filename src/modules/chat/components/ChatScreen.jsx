@@ -4,8 +4,7 @@
  * Purpose: Chat interface with WebSocket integration
  * Description: Displays messages, sends/receives via WebSocket
  * Author: Ekso Team
- * Updated: Использует WebSocketContext вместо прямого вызова useWebSocket
- * Debug: Добавлен точный лог CHAT FILTER для сравнения полей
+ * Updated: Использует lastChatMessage из контекста вместо lastMessage
  */
 
 import { useState, useEffect } from 'react';
@@ -27,7 +26,7 @@ const ChatScreen = ({
 }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const { isConnected, sendMessage, lastMessage } = useWebSocketContext();
+  const { isConnected, sendMessage, lastChatMessage } = useWebSocketContext();
 
   const displayName = recipientDisplayName || recipient;
   const avatarUrl = getFullAvatarUrl(recipientAvatar);
@@ -60,35 +59,35 @@ const ChatScreen = ({
 
   // ========== ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ==========
   useEffect(() => {
-    console.log('📩 ChatScreen lastMessage update:', lastMessage);
-    
-    if (lastMessage && lastMessage.type === 'chat_message') {
-      const payload = lastMessage.payload;
-      
-      console.log('🔍 CHAT FILTER:', {
-        nickname: JSON.stringify(nickname),
-        recipient: JSON.stringify(recipient),
-        from: JSON.stringify(payload.from),
-        to: JSON.stringify(payload.to),
-        toMatch: payload.to === nickname,
-        fromMatch: payload.from === recipient
-      });
-      
-      if (payload.to === nickname || payload.from === recipient) {
-        const newMessage = {
-          id: Date.now(),
-          text: payload.text || 'Сообщение',
-          sender: payload.from === nickname ? 'me' : 'them',
-          time: new Date(payload.timestamp || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-        };
-        
-        setMessages(prev => [...prev, newMessage]);
-        console.log('📩 Сообщение добавлено в чат:', newMessage);
-      } else {
-        console.log('⚠️ Сообщение не для этого чата, игнорируем');
-      }
+    if (!lastChatMessage) return;
+
+    const payload = lastChatMessage.payload;
+
+    console.log('📩 ChatScreen получил chat_message:', payload);
+
+    console.log('🔍 CHAT FILTER:', {
+      nickname: JSON.stringify(nickname),
+      recipient: JSON.stringify(recipient),
+      from: JSON.stringify(payload.from),
+      to: JSON.stringify(payload.to),
+      toMatch: payload.to === nickname,
+      fromMatch: payload.from === recipient
+    });
+
+    if (payload.to === nickname || payload.from === recipient) {
+      const newMessage = {
+        id: Date.now(),
+        text: payload.text || 'Сообщение',
+        sender: payload.from === nickname ? 'me' : 'them',
+        time: new Date(payload.timestamp || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setMessages(prev => [...prev, newMessage]);
+      console.log('📩 Сообщение добавлено в чат:', newMessage);
+    } else {
+      console.log('⚠️ Сообщение не для этого чата, игнорируем');
     }
-  }, [lastMessage, nickname, recipient]);
+  }, [lastChatMessage, nickname, recipient]);
 
   const texts = {
     ru: {
