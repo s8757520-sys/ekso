@@ -5,6 +5,7 @@
  * Description: Displays messages, sends/receives via WebSocket, loads history from localStorage
  * Author: Ekso Team
  * Updated: Поле ввода прикреплено внизу экрана (исправлено)
+ * Debug: Добавлен точный лог сравнения nickname, recipient, from, to
  */
 
 import { useState, useEffect } from 'react';
@@ -87,11 +88,19 @@ const ChatScreen = ({
     }
   }, [lastMessage, chatId, nickname]);
 
-  // ========== ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ==========
+  // ========== ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ (С ТОЧНЫМ ЛОГОМ) ==========
   useEffect(() => {
     if (lastMessage && lastMessage.type === 'chat_message') {
       const payload = lastMessage.payload;
       
+      console.log('🔍 Сравнение для ChatScreen:', {
+        nickname: JSON.stringify(nickname),
+        recipient: JSON.stringify(recipient),
+        from: JSON.stringify(payload.from),
+        to: JSON.stringify(payload.to),
+        payload: payload
+      });
+
       if (payload.to === nickname || payload.from === recipient) {
         setMessages((prev) => [
           ...prev,
