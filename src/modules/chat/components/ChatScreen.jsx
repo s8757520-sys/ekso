@@ -4,7 +4,7 @@
  * Purpose: Chat interface with WebSocket integration — с загрузкой истории
  * Description: Displays messages, sends/receives via WebSocket, loads history from localStorage
  * Author: Ekso Team
- * Updated: Поле ввода прикреплено внизу экрана
+ * Updated: Поле ввода прикреплено внизу экрана (исправлено)
  */
 
 import { useState, useEffect } from 'react';
@@ -153,7 +153,7 @@ const ChatScreen = ({
   };
 
   return (
-    <div className="flex flex-col h-[400px] sm:h-[500px] md:h-[550px] bg-[var(--bg-primary)] rounded-xl overflow-hidden shadow-sm">
+    <div className="flex flex-col h-full bg-[var(--bg-primary)] rounded-xl overflow-hidden shadow-sm">
       {/* ШАПКА ЧАТА */}
       <div className="bg-[var(--bg-secondary)] px-3 sm:px-4 py-3 border-b border-[var(--border-color)] flex items-center gap-3 flex-shrink-0">
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 bg-blue-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
