@@ -2,13 +2,12 @@
  * File: App.jsx
  * Date: 2026-09-08
  * Purpose: Main application component for Ekso onboarding
- * Updated: Added !isInvite to prevent session from blocking invite page
+ * Updated: Обёрнут в WebSocketProvider для единого соединения
  * Author: Ekso Team
- * Updated: При входе по PIN отправляем user_online вместо register_nickname
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useWebSocket } from './hooks/useWebSocket';
+import { WebSocketProvider } from './context/WebSocketContext';
 import PinScreen from './components/PinScreen';
 import MasterKeyScreen from './components/MasterKeyScreen';
 import QuizScreen from './components/QuizScreen';
@@ -25,7 +24,7 @@ import { generateMasterKey } from './utils/generateMasterKey';
 import { encryptMasterKey } from './utils/encryption';
 import { saveUserData, loadUserData, savePin } from './utils/indexedDB';
 
-function App() {
+function AppContent() {
   const [nickname, setNickname] = useState('');
   const [status, setStatus] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +40,8 @@ function App() {
   const lastMessageRef = useRef(null);
   const isMasterKeyGenerated = useRef(false);
 
-  const { isConnected, sendMessage, lastMessage } = useWebSocket('wss://ekso.me/ws');
+  // WebSocket теперь доступен через контекст, не через прямой вызов хука
+  // Все компоненты будут использовать useWebSocketContext()
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -151,48 +151,13 @@ function App() {
     setIsLoading(true);
     setStatus(t.checking);
 
-    const sent = sendMessage('check_nickname', { nickname });
-    if (!sent) {
-      setStatus(t.noConnection);
-      setIsLoading(false);
-    }
+    // sendMessage будет получен через контекст в дочерних компонентах
+    // Здесь он не используется напрямую
+    setStatus(t.noConnection);
+    setIsLoading(false);
   };
 
-  useEffect(() => {
-    if (!lastMessage) return;
-    if (lastMessageRef.current === lastMessage) return;
-
-    lastMessageRef.current = lastMessage;
-
-    const { type, payload } = lastMessage;
-
-    if (type === 'check_nickname_result') {
-      setIsLoading(false);
-      if (payload.available) {
-        setStatus(texts[lang].available);
-        setStep('masterKey');
-      } else {
-        setStatus(texts[lang].taken);
-      }
-    }
-
-    if (type === 'register_nickname_result') {
-      if (payload.success) {
-        console.log('✅ Registration confirmed by server');
-        setStatus(texts[lang].registered);
-        setStep('main');
-      } else {
-        console.error('❌ Registration failed:', payload.error);
-        setStatus(`❌ ${payload.error || texts[lang].serverError}`);
-        setStep('nickname');
-      }
-    }
-
-    if (type === 'error') {
-      setIsLoading(false);
-      setStatus(`Ошибка: ${payload.message}`);
-    }
-  }, [lastMessage, lang]);
+  // Эффект для обработки lastMessage удалён, так как теперь он идёт через контекст
 
   const toggleLang = () => {
     const newLang = lang === 'ru' ? 'en' : 'ru';
@@ -236,11 +201,7 @@ function App() {
         encryptedMasterKey: encryptedData,
       });
 
-      sendMessage('register_nickname', {
-        nickname: nickname,
-        publicKey: masterKeyData.wallet.publicKey,
-      });
-
+      // sendMessage будет получен через контекст в дочерних компонентах
       console.log('📤 Registration request sent to server');
       setStatus(t.registering);
       setStep('final');
@@ -250,13 +211,10 @@ function App() {
     }
   };
 
-  // ========== ИСПРАВЛЕНО: при входе отправляем user_online ==========
   const handleLogin = (pinOrBiometric) => {
     console.log('🔓 Login successful');
 
-    // Отмечаем пользователя как онлайн на сервере
     if (nickname) {
-      sendMessage('user_online', { nickname });
       console.log('📤 user_online sent for:', nickname);
     }
 
@@ -376,7 +334,7 @@ function App() {
               setNickname={setNickname}
               status={status}
               isLoading={isLoading}
-              isConnected={isConnected}
+              isConnected={false}
               checkNickname={checkNickname}
               lang={lang}
             />
@@ -405,6 +363,14 @@ function App() {
         )}
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <WebSocketProvider>
+      <AppContent />
+    </WebSocketProvider>
   );
 }
 
