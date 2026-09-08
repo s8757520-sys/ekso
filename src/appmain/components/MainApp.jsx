@@ -4,13 +4,7 @@
  * Purpose: Main application interface after login
  * Description: Displays dashboard with chats, channels, wallet, settings
  * Author: Ekso Team
- * Updated: 
- *   - Информационная заглушка вместо пустого списка чатов
- *   - Кнопки: Добавить контакт, Ссылка на профиль, Гостевой чат
- *   - Добавлена обработка входящих chat_message
- *   - Добавлен индикатор непрочитанных сообщений (зелёный мерцающий кружок)
- *   - Добавлен window.ws для отладки
- *   - Под именем контакта отображается "📩 Есть новое сообщение"
+ * Updated: Использует WebSocketContext вместо прямого вызова useWebSocket
  */
 
 import { useState, useEffect } from 'react';
@@ -20,7 +14,7 @@ import Footer from './Footer';
 import Sidebar from './Sidebar';
 import ProfileScreen from '../MScreens/ProfileScreen';
 import ContactsScreen from '../MScreens/ContactsScreen';
-import { useWebSocket } from '../../hooks/useWebSocket';
+import { useWebSocketContext } from '../../context/WebSocketContext';
 
 const getFullAvatarUrl = (avatar) => {
   if (!avatar) return null;
@@ -40,11 +34,7 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
   const [currentScreen, setCurrentScreen] = useState('chats');
   const [chats, setChats] = useState([]);
 
-  const { isConnected, sendMessage, lastMessage, ws } = useWebSocket();
-
-  // ========== ДЛЯ ОТЛАДКИ ==========
-  window.ws = ws;
-  window.sendMessage = sendMessage;
+  const { isConnected, sendMessage, lastMessage } = useWebSocketContext();
 
   // Загружаем чаты из localStorage
   useEffect(() => {
@@ -130,7 +120,6 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
     setSelectedChatDisplayName(chat.displayName || chat.name || chat.id);
     setSelectedChatAvatar(getFullAvatarUrl(chat.avatar));
     
-    // Сбрасываем unread при открытии чата
     setChats(prevChats => 
       prevChats.map(c => 
         c.id === chat.id ? { ...c, unread: false } : c
@@ -355,7 +344,6 @@ const MainApp = ({ nickname, publicKey, initialLang = 'ru', onNavigate }) => {
                     {chat.displayName || chat.name || chat.id}
                   </span>
                   <span className="text-xs text-[var(--text-secondary)]">{chat.time || '—'}</span>
-                  {/* Индикатор непрочитанных */}
                   {chat.unread ? (
                     <span className="w-3 h-3 bg-green-500 rounded-full inline-block ml-2 animate-pulse"></span>
                   ) : (
